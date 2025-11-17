@@ -1,22 +1,27 @@
 """Main script to run all activity detection analysis tasks."""
 
+# Set non-interactive matplotlib backend early to avoid multiprocessing/threading issues
+import matplotlib
+matplotlib.use('Agg')  # Must be set before any matplotlib imports
+
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
 import warnings
 warnings.filterwarnings('ignore')
 
 from utils import (
     DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, DEFAULT_SAMPLING_FREQUENCY,
-    VISUALIZATIONS_DIR, ensure_visualizations_dir
+    VISUALIZATIONS_DIR, ensure_visualizations_dir,
+    train_test_split, StandardScaler, LabelEncoder
 )
 from data_loading import download_dataset, load_activity_data, create_dataset_summary
 from preprocessing import preprocess_signal, preprocess_dataset
 from windowing import create_windows, analyze_window_sizes
 from feature_extraction import extract_features_from_dataset
-from modeling import train_classical_models, create_sequences_for_dl
+from modeling import train_classical_models, create_sequences_for_dl, FeatureDataset, evaluate_pytorch_model
+from torch.utils.data import DataLoader
+from utils import get_device
 from evaluation import (
     evaluate_standard_split, evaluate_loso, compare_window_sizes,
     generate_confusion_matrix, generate_classification_report
@@ -264,7 +269,11 @@ def main():
     plot_window_size_comparison(window_results_df, 
                                 output_path=output_dir / 'task7_window_size_comparison.png')
     
-    y_pred_best = best_model.predict(X_test)
+    # Evaluate best PyTorch model
+    device, _ = get_device()
+    test_dataset = FeatureDataset(X_test, y_test)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    y_pred_best, _ = evaluate_pytorch_model(best_model, test_loader, device)
     cm, cm_normalized, class_names = generate_confusion_matrix(y_test, y_pred_best, le.classes_)
     
     plot_confusion_matrix(cm, cm_normalized, class_names, 

@@ -1,5 +1,9 @@
 """All visualization and plotting functions."""
 
+# Set non-interactive backend for matplotlib to avoid threading/multiprocessing issues
+import matplotlib
+matplotlib.use('Agg')  # Must be set before importing pyplot
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -206,19 +210,51 @@ def plot_feature_distributions(features_df, output_path):
 
 
 def plot_feature_importance(features_df, feature_cols, output_path):
-    """Task 5: Plot feature importance."""
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.preprocessing import LabelEncoder
+    """Task 5: Plot feature importance using NumPy-based ANOVA F-score."""
+    import numpy as np
+    from utils import LabelEncoder
     
     X = features_df[feature_cols].fillna(0).values
     y = LabelEncoder().fit_transform(features_df['label'])
     
-    rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-    rf.fit(X, y)
+    # Calculate feature importance using ANOVA F-score (between-class / within-class variance)
+    unique_labels = np.unique(y)
+    n_features = X.shape[1]
+    importance_scores = np.zeros(n_features)
+    
+    for feat_idx in range(n_features):
+        feature_values = X[:, feat_idx]
+        
+        # Calculate between-class variance
+        overall_mean = np.mean(feature_values)
+        between_var = 0.0
+        for label in unique_labels:
+            class_mask = y == label
+            class_mean = np.mean(feature_values[class_mask])
+            class_size = np.sum(class_mask)
+            between_var += class_size * (class_mean - overall_mean) ** 2
+        
+        # Calculate within-class variance
+        within_var = 0.0
+        for label in unique_labels:
+            class_mask = y == label
+            class_values = feature_values[class_mask]
+            if len(class_values) > 1:
+                within_var += np.sum((class_values - np.mean(class_values)) ** 2)
+        
+        # F-score: between-class variance / within-class variance
+        if within_var > 0:
+            importance_scores[feat_idx] = between_var / within_var
+        else:
+            importance_scores[feat_idx] = 0.0
+    
+    # Normalize importance scores to sum to 1 (similar to sklearn's feature_importances_)
+    if np.sum(importance_scores) > 0:
+        importance_scores = importance_scores / np.sum(importance_scores)
     
     importance_df = pd.DataFrame({
         'feature': feature_cols,
-        'importance': rf.feature_importances_
+        'importance': importance_scores
     }).sort_values('importance', ascending=False)
     
     fig, axes = plt.subplots(1, 2, figsize=(18, 6))

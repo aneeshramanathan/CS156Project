@@ -2,9 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from scipy.fft import fft, fftfreq
-from scipy.stats import entropy
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
 
 
@@ -12,8 +10,12 @@ def extract_time_domain_features(window):
     """Extract time-domain features from a signal window."""
     features = {}
     
-    features['mean'] = np.mean(window)
-    features['std'] = np.std(window)
+    window = np.asarray(window)
+    mean = np.mean(window)
+    std = np.std(window)
+    
+    features['mean'] = mean
+    features['std'] = std
     features['rms'] = np.sqrt(np.mean(window**2))
     
     zero_crossings = np.sum(np.diff(np.sign(window)) != 0)
@@ -23,13 +25,29 @@ def extract_time_domain_features(window):
     features['max'] = np.max(window)
     features['range'] = features['max'] - features['min']
     features['median'] = np.median(window)
-    features['skewness'] = pd.Series(window).skew()
-    features['kurtosis'] = pd.Series(window).kurtosis()
+    
+    # Pure numpy skewness and kurtosis (replaces pandas)
+    if std > 0:
+        centered = (window - mean) / std
+        features['skewness'] = np.mean(centered**3)
+        features['kurtosis'] = np.mean(centered**4) - 3.0  # excess kurtosis
+    else:
+        features['skewness'] = 0.0
+        features['kurtosis'] = 0.0
     
     features['peak_to_peak'] = np.ptp(window)
-    features['mad'] = np.mean(np.abs(window - features['mean']))
+    features['mad'] = np.mean(np.abs(window - mean))
     
     return features
+
+
+def _entropy(pk):
+    """Compute entropy using numpy (replaces scipy.stats.entropy)."""
+    pk = np.asarray(pk)
+    pk = pk[pk > 0]  # Remove zeros
+    if len(pk) == 0:
+        return 0.0
+    return -np.sum(pk * np.log(pk))
 
 
 def extract_frequency_domain_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
@@ -37,9 +55,9 @@ def extract_frequency_domain_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
     features = {}
     
     N = len(window)
-    fft_vals = fft(window)
+    fft_vals = np.fft.fft(window)
     fft_mag = np.abs(fft_vals[:N//2])
-    fft_freq = fftfreq(N, 1/fs)[:N//2]
+    fft_freq = np.fft.fftfreq(N, 1/fs)[:N//2]
     
     if len(fft_mag) > 0:
         dominant_freq_idx = np.argmax(fft_mag)
@@ -54,7 +72,7 @@ def extract_frequency_domain_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
     if psd_sum > 0:
         psd_norm = psd / psd_sum
         psd_norm = psd_norm[psd_norm > 0]
-        features['spectral_entropy'] = entropy(psd_norm) if len(psd_norm) > 0 else 0.0
+        features['spectral_entropy'] = _entropy(psd_norm) if len(psd_norm) > 0 else 0.0
     else:
         features['spectral_entropy'] = 0.0
     
@@ -86,18 +104,9 @@ def extract_all_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
     return all_features
 
 
-def _extract_features_from_sensor_column(item, col, window_size, overlap):
+def _extract_features_from_sensor_column(signal, labels, col, participant, window_size, overlap):
     """Helper function to extract features from a single sensor column (for parallelization)."""
-    from windowing import create_windows
-    
-    df = item['df']
-    label_col = item['label_col']
-    participant = item['participant']
-    
-    signal = df[col].values
-    labels = df[label_col].values if label_col in df.columns else None
-    
-    if labels is None:
+    if labels is None or len(labels) == 0:
         return []
     
     step_size = int(window_size * (1 - overlap))
@@ -123,34 +132,43 @@ def _extract_features_from_sensor_column(item, col, window_size, overlap):
 
 
 def extract_features_from_dataset(preprocessed_data, window_size=DEFAULT_WINDOW_SIZE, 
-                                   overlap=DEFAULT_OVERLAP, use_multithreading=True):
+                                   overlap=DEFAULT_OVERLAP, use_multiprocessing=True):
     """
-    Extract features from entire dataset with optional multithreading.
+    Extract features from entire dataset with optional multiprocessing.
     
     Args:
         preprocessed_data: List of preprocessed data items
         window_size: Size of sliding windows
         overlap: Overlap ratio between windows
-        use_multithreading: Whether to use multithreading (default: True)
+        use_multiprocessing: Whether to use multiprocessing (default: True)
     """
     platform_info = detect_platform()
     
-    if use_multithreading:
+    if use_multiprocessing:
         cpu_count = platform_info['cpu_count']
         max_workers = max(1, cpu_count - 1)  # Use all cores except 1 to leave one for system
         
-        print(f"Using multithreading with {max_workers} workers for feature extraction...")
+        print(f"Using multiprocessing with {max_workers} workers for feature extraction...")
         
         all_results = []
         
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             
             for item in preprocessed_data:
+                df = item['df']
+                label_col = item['label_col']
+                participant = item['participant']
                 preprocessed_cols = item['preprocessed_cols']
+                
+                # Extract labels once per item
+                labels = df[label_col].values if label_col in df.columns else None
+                
                 for col in preprocessed_cols:
+                    signal = df[col].values
+                    # Pass numpy arrays instead of DataFrames for better pickling
                     future = executor.submit(_extract_features_from_sensor_column, 
-                                           item, col, window_size, overlap)
+                                           signal, labels, col, participant, window_size, overlap)
                     futures.append(future)
             
             completed = 0
@@ -168,9 +186,16 @@ def extract_features_from_dataset(preprocessed_data, window_size=DEFAULT_WINDOW_
     else:
         all_results = []
         for item in preprocessed_data:
+            df = item['df']
+            label_col = item['label_col']
+            participant = item['participant']
             preprocessed_cols = item['preprocessed_cols']
+            
+            labels = df[label_col].values if label_col in df.columns else None
+            
             for col in preprocessed_cols:
-                results = _extract_features_from_sensor_column(item, col, window_size, overlap)
+                signal = df[col].values
+                results = _extract_features_from_sensor_column(signal, labels, col, participant, window_size, overlap)
                 all_results.extend(results)
     
     all_features = [r['features'] for r in all_results]

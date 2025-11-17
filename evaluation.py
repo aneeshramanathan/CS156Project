@@ -4,30 +4,25 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
-from sklearn.model_selection import LeaveOneGroupOut, cross_val_score
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import (accuracy_score, precision_score, recall_score, 
-                            f1_score, confusion_matrix, classification_report)
 from feature_extraction import extract_features_from_dataset
 from modeling import train_classical_models, RandomForestNN, FeatureDataset, train_pytorch_model, evaluate_pytorch_model
-from utils import DEFAULT_SAMPLING_FREQUENCY, detect_platform, get_device
+from utils import (
+    DEFAULT_SAMPLING_FREQUENCY, detect_platform, get_device,
+    StandardScaler, LabelEncoder, train_test_split,
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, classification_report
+)
 
 
 def evaluate_standard_split(model, X_train, y_train, X_test, y_test):
     """Evaluate PyTorch model with standard 80/20 split."""
     device, _ = get_device()
     
-    if isinstance(model, torch.nn.Module):
-        # PyTorch model
-        model.eval()
-        test_dataset = FeatureDataset(X_test, y_test)
-        test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-        y_pred, y_true = evaluate_pytorch_model(model, test_loader, device)
-    else:
-        # Fallback for sklearn models (if any)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        y_true = y_test
+    # PyTorch model evaluation
+    model.eval()
+    test_dataset = FeatureDataset(X_test, y_test)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+    y_pred, y_true = evaluate_pytorch_model(model, test_loader, device)
     
     accuracy = accuracy_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
@@ -105,7 +100,8 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    logo = LeaveOneGroupOut()
+    # Manual LOSO implementation: iterate over unique groups
+    unique_groups = np.unique(groups)
     loso_scores = []
     loso_predictions = []
     loso_true_labels = []
@@ -113,7 +109,13 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
     print("Running LOSO evaluation (may take a while)...\n")
     
     fold = 1
-    for train_idx, test_idx in logo.split(X_scaled, y, groups):
+    for test_group in unique_groups:
+        # Split: test on current group, train on all others
+        test_mask = groups == test_group
+        train_mask = ~test_mask
+        
+        train_idx = np.where(train_mask)[0]
+        test_idx = np.where(test_mask)[0]
         X_train_fold = X_scaled[train_idx]
         X_test_fold = X_scaled[test_idx]
         y_train_fold = y[train_idx]
@@ -182,8 +184,6 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
         DataFrame with window size comparison results
     """
     from feature_extraction import extract_features_from_dataset
-    from sklearn.model_selection import train_test_split
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
     
     device, device_name = get_device()
     

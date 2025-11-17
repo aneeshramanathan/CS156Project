@@ -7,10 +7,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from utils import DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform, get_device
+from utils import (
+    DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform, get_device,
+    accuracy_score, precision_score, recall_score, f1_score
+)
 
 
 class FeatureDataset(Dataset):
@@ -265,6 +265,13 @@ def train_classical_models(X_train, y_train, X_test, y_test):
         print(f"\nTraining {name}...")
         
         model = config['model_class'](input_size, num_classes).to(device)
+        
+        # Verify model is on the correct device
+        model_device = next(model.parameters()).device
+        if model_device.type == 'cuda':
+            print(f"  ✓ Model loaded on GPU: {torch.cuda.get_device_name(model_device.index)}")
+        else:
+            print(f"  ⚠ Model loaded on {model_device.type.upper()}")
         
         start_time = time.time()
         train_pytorch_model(model, train_loader, device, 
