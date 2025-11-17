@@ -347,10 +347,11 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 Add your team member contributions here:
 
-- **Member 1**: [Name] - Data preprocessing, LSTM model
-- **Member 2**: [Name] - GRU model, evaluation
-- **Member 3**: [Name] - Transformer model, dashboard
-- **Member 4**: [Name] - Pattern analysis, documentation
+- **Member 1**: [Nishad] - Data Understanding & Exploration
+- **Member 2**: [Joshua] - Signal Processing, & Windowing
+- **Member 3**: [Karan] - Feature Engineering & Analysis
+- **Member 4**: [Aneesh] - Modeling, LTSM Model
+- **Member 5**: [Vinzent] - Evaluation & Integration
 
 ## References
 
