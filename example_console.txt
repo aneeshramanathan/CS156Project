@@ -1,16 +1,16 @@
 ============================================================
 ACTIVITY DETECTION ANALYSIS - COMPREHENSIVE PIPELINE
-============================================================      
+============================================================
 
-============================================================      
+============================================================
 TASK 1: Dataset Exploration
-============================================================      
+============================================================
 Using local cache in C:\Users\joshd\school\cs156\CS156Project\data
 Found 12 activity folders in local cache
 Loading real data from activity folders...
 Found 12 activity folders
 Successfully loaded 12 activity sessions
-Activity types found: {'cycling', 'walking', 'sitting'}
+Activity types found: {'sitting', 'cycling', 'walking'}
 
 === DATASET SUMMARY TABLE ===
                    Metric Value
@@ -22,23 +22,23 @@ Avg Files per Participant   1.0
 
 Activity types: ['cycling', 'sitting', 'walking']
 
-✓ Task 1 Complete: Dataset summary created
+[OK] Task 1 Complete: Dataset summary created
 
 ============================================================
 TASK 2: Annotated Signal Exploration
 ============================================================
 
-✓ Task 2 Complete: Signal visualization finished
+[OK] Task 2 Complete: Signal visualization finished
 
 ============================================================
 TASK 3: Signal Preprocessing
 ============================================================
-Missing data points: 3963
+Missing data points: 3957
 After preprocessing: 0
-Original signal std: 52.0003
-Preprocessed signal std: 0.0000
+Original signal std: 51.9766
+Preprocessed signal std: 0.0001
 
-✓ Task 3 Complete: Signal preprocessing finished
+[OK] Task 3 Complete: Signal preprocessing finished
 
 ============================================================
 TASK 4: Windowing Strategies
@@ -59,110 +59,111 @@ TASK 4: Windowing Strategies
          400        358  0.999332                8.0
          500        286  0.998636               10.0
 
-✓ Task 4 Complete: Windowing analysis finished
+[OK] Task 4 Complete: Windowing analysis finished
 
 ============================================================
 TASK 5: Feature Extraction & Analysis
 ============================================================
 Extracting features from all data...
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
 
-Extracted 332946 feature vectors
-Features: 18
+Extracted 220955 feature vectors
+Features: 19
 
 === TOP 15 MOST IMPORTANT FEATURES ===
           feature  importance
-     peak_to_peak    0.101556
-            range    0.101556
-              std    0.101187
-              rms    0.101094
-              min    0.099743
-              mad    0.098529
-              max    0.095153
-  spectral_energy    0.083490
-spectral_centroid    0.065012
- spectral_rolloff    0.063658
- spectral_entropy    0.048456
-              zcr    0.016543
-  spectral_spread    0.011107
-             mean    0.004061
-    dominant_freq    0.003043
+            range    0.101115
+     peak_to_peak    0.101115
+              min    0.099157
+              rms    0.097305
+              std    0.097206
+              mad    0.093946
+ spectral_rolloff    0.092447
+              max    0.090000
+spectral_centroid    0.081573
+  spectral_energy    0.079819
+ spectral_entropy    0.029941
+  spectral_spread    0.021071
+              zcr    0.007580
+           median    0.002899
+         kurtosis    0.002875
 
-✓ Task 5 Complete: Feature extraction finished
+[OK] Task 5 Complete: Feature extraction finished
 
 ============================================================
 TASK 6: Classical ML Modeling
 ============================================================
-Training set size: 266358
-Test set size: 66588
+Training set size: 176764
+Test set size: 44191
 Number of classes: 3
 
 Platform detected: Windows AMD64
 Using CPU-based scikit-learn models for classical ML algorithms
-Input features: 18, Number of classes: 3
+Input features: 13, Number of classes: 3
+Class weights: {np.int64(0): np.float64(0.5538135699426022), np.int64(1): np.float64(1.8419824100704432), np.int64(2): np.float64(1.5350493261081006)}
 
 Training Decision Tree...
-  Accuracy: 0.7885
-  Precision: 0.7843
-  Recall: 0.7123
-  F1-Score: 0.7466
-  Training time: 4.22s
-  Prediction time: 0.0080s
+  Accuracy: 0.7131
+  Precision: 0.6729
+  Recall: 0.7405
+  F1-Score: 0.6884
+  Training time: 1.87s
+  Prediction time: 0.0040s
 
 Training SVM...
-  Accuracy: 0.6861
-  Precision: 0.7078
-  Recall: 0.5620
-  F1-Score: 0.6265
-  Training time: 12.32s
-  Prediction time: 0.0030s
+  Accuracy: 0.6390
+  Precision: 0.6383
+  Recall: 0.5846
+  F1-Score: 0.5451
+  Training time: 3.71s
+  Prediction time: 0.0020s
 
 Training Naive Bayes...
-  Accuracy: 0.5452
-  Precision: 0.5532
-  Recall: 0.5825
-  F1-Score: 0.5675
-  Training time: 0.05s
-  Prediction time: 0.0270s
+  Accuracy: 0.4798
+  Precision: 0.5461
+  Recall: 0.5444
+  F1-Score: 0.4445
+  Training time: 0.03s
+  Prediction time: 0.0030s
 
 Training Random Forest...
-  Accuracy: 0.8208
-  Precision: 0.8426
-  Recall: 0.7413
-  F1-Score: 0.7888
-  Training time: 4.34s
-  Prediction time: 0.0540s
+  Accuracy: 0.7553
+  Precision: 0.7076
+  Recall: 0.7704
+  F1-Score: 0.7264
+  Training time: 4.97s
+  Prediction time: 0.0860s
 
 Training AdaBoost...
-  Accuracy: 0.5993
-  Precision: 0.1998
+  Accuracy: 0.6019
+  Precision: 0.2006
   Recall: 0.3333
-  F1-Score: 0.2498
-  Training time: 36.41s
-  Prediction time: 0.1547s
+  F1-Score: 0.2505
+  Training time: 15.32s
+  Prediction time: 0.0920s
 
 Training XGBoost (true gradient-boosted trees)...
-  Accuracy: 0.7910
-  Precision: 0.8138
-  Recall: 0.6999
-  F1-Score: 0.7526
-  Training time: 0.93s
-  Prediction time: 0.0190s
+  Accuracy: 0.7178
+  Precision: 0.6802
+  Recall: 0.7529
+  F1-Score: 0.6947
+  Training time: 2.19s
+  Prediction time: 0.0400s
 
 === MODEL COMPARISON SUMMARY ===
         Model  Accuracy  Precision   Recall  F1-Score  Train Time (s)  Pred Time (s)
-Decision Tree  0.788475   0.784304 0.712320  0.746581        4.218688       0.008001
-          SVM  0.686100   0.707821 0.561975  0.626522       12.321841       0.002998
-  Naive Bayes  0.545158   0.553226 0.582509  0.567490        0.053000       0.027001
-Random Forest  0.820809   0.842646 0.741337  0.788752        4.338346       0.054000
-     AdaBoost  0.599342   0.199781 0.333333  0.249829       36.408939       0.154661
-      XGBoost  0.791028   0.813790 0.699937  0.752582        0.931000       0.019000
+Decision Tree  0.713109   0.672852 0.740544  0.688394        1.866974          0.004
+          SVM  0.639022   0.638340 0.584604  0.545072        3.705250          0.002
+  Naive Bayes  0.479758   0.546139 0.544379  0.444454        0.027000          0.003
+Random Forest  0.755335   0.707636 0.770441  0.726428        4.974364          0.086
+     AdaBoost  0.601887   0.200629 0.333333  0.250491       15.321297          0.092
+      XGBoost  0.717838   0.680235 0.752887  0.694730        2.188676          0.040
 
-Best model: Random Forest
+Best model (by macro F1-Score): Random Forest
 
-✓ Task 6 Complete: Classical ML modeling finished
+[OK] Task 6 Complete: Classical ML modeling finished
 
 ============================================================
 TASK 7: Advanced Evaluation
@@ -178,123 +179,125 @@ Participants: ['Cycling-2023-09-14_06-22-31' 'Cycling-2023-09-14_06-33-47'
 Using scikit-learn RandomForestClassifier
 Running LOSO evaluation (may take a while)...
 
-Fold 1/12 (Participant Cycling-2023-09-14_06-22-31): Accuracy = 0.8123
-Fold 2/12 (Participant Cycling-2023-09-14_06-33-47): Accuracy = 0.8531
-Fold 3/12 (Participant Cycling-2023-09-14_06-47-00): Accuracy = 0.9184
-Fold 4/12 (Participant Cycling-2023-09-16_07-43-07): Accuracy = 0.8430
-Fold 5/12 (Participant Cycling-2023-09-16_09-25-09): Accuracy = 0.8368
-Fold 6/12 (Participant Cycling-2023-10-18_06-36-17): Accuracy = 0.9206
-Fold 7/12 (Participant Cycling-2023-10-18_06-51-26): Accuracy = 0.9544
-Fold 8/12 (Participant Sitting-2023-09-14_08-37-45): Accuracy = 0.6713
-Fold 9/12 (Participant Sitting-2023-09-14_09-11-15): Accuracy = 0.6407
-Fold 10/12 (Participant Sitting-2023-10-18_09-05-37): Accuracy = 0.4030
-Fold 11/12 (Participant Walking-2023-09-14_21-51-59): Accuracy = 0.3611
-Fold 12/12 (Participant Walking-2023-09-16_18-14-40): Accuracy = 0.2123
+Fold 1/12 (Participant Cycling-2023-09-14_06-22-31): Accuracy = 0.7007
+Fold 2/12 (Participant Cycling-2023-09-14_06-33-47): Accuracy = 0.7246
+Fold 3/12 (Participant Cycling-2023-09-14_06-47-00): Accuracy = 0.7639
+Fold 4/12 (Participant Cycling-2023-09-16_07-43-07): Accuracy = 0.7178
+Fold 5/12 (Participant Cycling-2023-09-16_09-25-09): Accuracy = 0.7542
+Fold 6/12 (Participant Cycling-2023-10-18_06-36-17): Accuracy = 0.7717
+Fold 7/12 (Participant Cycling-2023-10-18_06-51-26): Accuracy = 0.8023
+Fold 8/12 (Participant Sitting-2023-09-14_08-37-45): Accuracy = 0.7396
+Fold 9/12 (Participant Sitting-2023-09-14_09-11-15): Accuracy = 0.7358
+Fold 10/12 (Participant Sitting-2023-10-18_09-05-37): Accuracy = 0.4191
+Fold 11/12 (Participant Walking-2023-09-14_21-51-59): Accuracy = 0.5034
+Fold 12/12 (Participant Walking-2023-09-16_18-14-40): Accuracy = 0.3238
 
 === LOSO OVERALL RESULTS ===
-Mean Accuracy: 0.7023 (+/- 0.2383)
-Overall Accuracy: 0.6815
-Overall Precision (macro): 0.6384
-Overall Recall (macro): 0.5683
-Overall F1-Score (macro): 0.6013
+Mean Accuracy: 0.6631 (+/- 0.1498)
+Overall Accuracy: 0.6487
+Overall Precision (macro): 0.5871
+Overall Recall (macro): 0.5920
+Overall F1-Score (macro): 0.5785
 
 === EVALUATION METHOD COMPARISON ===
      Evaluation Method  Accuracy  Precision (macro)  Recall (macro)  F1-Score (macro)
-Standard Split (80/20)  0.820809           0.842646        0.741337          0.788752
- LOSO Cross-Validation  0.681513           0.638445        0.568267          0.601315
+Standard Split (80/20)  0.755335           0.707636        0.770441          0.726428
+ LOSO Cross-Validation  0.648725           0.587079        0.591952          0.578523
 Testing window size: 25 samples (0.50 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.7463, F1: 0.6888, N=2081781
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.6848, F1: 0.6358, N=2303341
 
 Testing window size: 50 samples (1.00 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.7688, F1: 0.7207, N=999162
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7122, F1: 0.6639, N=1105501
 
 Testing window size: 75 samples (1.50 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.7841, F1: 0.7423, N=675045
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7282, F1: 0.6836, N=746889
 
 Testing window size: 100 samples (2.00 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8025, F1: 0.7658, N=499518
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7393, F1: 0.6957, N=552681
 
 Testing window size: 125 samples (2.50 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8118, F1: 0.7781, N=402786
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7514, F1: 0.7102, N=445654
 
 Testing window size: 150 samples (3.00 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8204, F1: 0.7880, N=332946
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7569, F1: 0.7170, N=368381
 
 Testing window size: 175 samples (3.50 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8312, F1: 0.8014, N=287010
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7270, F1: 0.6983, N=317557
 
 Testing window size: 200 samples (4.00 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8387, F1: 0.8105, N=249696
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7364, F1: 0.7234, N=276271
 
 Testing window size: 250 samples (5.00 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8473, F1: 0.8208, N=199701
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7423, F1: 0.7144, N=220955
 
 Testing window size: 300 samples (6.00 seconds)
 Using multiprocessing with 31 workers for feature extraction...
-  Processed 108/108 sensor columns...
-  Completed processing all 108 sensor columns
-  Accuracy: 0.8565, F1: 0.8315, N=166401
+  Processed 119/119 sensor columns...
+  Completed processing all 119 sensor columns
+  Accuracy: 0.7842, F1: 0.7476, N=184111
 
 
 === WINDOW SIZE COMPARISON TABLE ===
  Window Size  Duration (s)  N Samples  Accuracy  Precision   Recall  F1-Score
-          25           0.5    2081781  0.746256   0.778956 0.617323  0.688785
-          50           1.0     999162  0.768815   0.795539 0.658707  0.720685
-          75           1.5     675045  0.784102   0.812799 0.683080  0.742315
-         100           2.0     499518  0.802458   0.829702 0.711048  0.765806
-         125           2.5     402786  0.811845   0.838472 0.725818  0.778088
-         150           3.0     332946  0.820358   0.841956 0.740552  0.788005
-         175           3.5     287010  0.831237   0.851266 0.757075  0.801413
-         200           4.0     249696  0.838660   0.858767 0.767325  0.810475
-         250           5.0     199701  0.847292   0.868420 0.778145  0.820808
-         300           6.0     166401  0.856486   0.872376 0.794200  0.831455
+          25           0.5    2303341  0.684830   0.633155 0.665418  0.635787
+          50           1.0    1105501  0.712213   0.666153 0.688860  0.663933
+          75           1.5     746889  0.728226   0.684952 0.707658  0.683644
+         100           2.0     552681  0.739336   0.699049 0.718587  0.695712
+         125           2.5     445654  0.751422   0.714593 0.732915  0.710231
+         150           3.0     368381  0.756925   0.722233 0.738975  0.716962
+         175           3.5     317557  0.726965   0.680892 0.744982  0.698312
+         200           4.0     276271  0.736386   0.730035 0.751475  0.723435
+         250           5.0     220955  0.742255   0.696384 0.762319  0.714420
+         300           6.0     184111  0.784184   0.759529 0.765919  0.747601
 
 === PER-CLASS PERFORMANCE REPORT ===
               precision    recall  f1-score   support
 
-        cycling        0.80      0.95      0.87        39909
-        sitting        0.86      0.77      0.81        12281
-        walking        0.86      0.50      0.64        14398
+     cycling       0.92      0.74      0.82     26598
+     sitting       0.59      0.86      0.70      7997
+     walking       0.61      0.72      0.66      9596
 
-    avg / total        0.84      0.74      0.77        66588
+    accuracy                           0.76     44191
+   macro avg       0.71      0.77      0.73     44191
+weighted avg       0.79      0.76      0.76     44191
 
 
-Most common misclassifications:
-  walking → cycling: 6576 times
-  sitting → cycling: 2692 times
-  cycling → walking: 1038 times
-  cycling → sitting: 916 times
-  walking → sitting: 561 times
-  sitting → walking: 149 times
+Most common classification errors (true -> predicted):
+  true=cycling, predicted=walking: 3527 times
+  true=cycling, predicted=sitting: 3408 times
+  true=walking, predicted=cycling: 1414 times
+  true=walking, predicted=sitting: 1315 times
+  true=sitting, predicted=walking: 814 times
+  true=sitting, predicted=cycling: 334 times
 
-✓ Task 7 Complete: Advanced evaluation finished
+[OK] Task 7 Complete: Advanced evaluation finished
 
 ============================================================
 ALL TASKS COMPLETE!
@@ -314,6 +317,6 @@ Generated files:
   - task7_window_size_comparison.png
   - task7_confusion_matrix.png
   - task7_error_analysis.png
-  - X_seq_train.npy, X_seq_test.npy (DL data)
-  - y_seq_train.npy, y_seq_test.npy (DL labels)
+  - X_seq_train.npy, X_seq_test.npy (sequence data for deep activity classification models)
+  - y_seq_train.npy, y_seq_test.npy (sequence labels for activity classification)
 ============================================================
