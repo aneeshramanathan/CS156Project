@@ -5,6 +5,10 @@ import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
 
+# Minimum fraction of the majority label required in a window.
+# This helps drop ambiguous transition windows (e.g., half walking, half cycling).
+MIN_LABEL_FRACTION = 0.8
+
 
 def extract_time_domain_features(window):
     """Extract time-domain features from a signal window."""
@@ -105,7 +109,12 @@ def extract_all_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
 
 
 def _extract_features_from_sensor_column(signal, labels, col, participant, window_size, overlap):
-    """Helper function to extract features from a single sensor column (for parallelization)."""
+    """Helper function to extract features from a single sensor column.
+
+    Each returned row corresponds to one sensor window with its **current**
+    activity label (the majority label inside that window). This is used for
+    activity classification, not next-activity prediction.
+    """
     if labels is None or len(labels) == 0:
         return []
     
@@ -117,6 +126,12 @@ def _extract_features_from_sensor_column(signal, labels, col, participant, windo
         window_labels = labels[i:i + window_size]
         
         unique, counts = np.unique(window_labels, return_counts=True)
+        if len(counts) == 0:
+            continue
+        max_count = counts.max()
+        # Skip windows where the majority label doesn't dominate enough (transition / noisy windows)
+        if max_count / len(window_labels) < MIN_LABEL_FRACTION:
+            continue
         majority_label = unique[np.argmax(counts)]
         
         features = extract_all_features(window)
@@ -205,6 +220,13 @@ def extract_features_from_dataset(preprocessed_data, window_size=DEFAULT_WINDOW_
     features_df = pd.DataFrame(all_features)
     features_df['label'] = all_labels
     features_df['participant'] = all_participants
+    
+    # Encode sensor_channel (string) as a numeric feature so models can
+    # distinguish between accelerometer axes, gyroscope channels, GPS speed, etc.
+    if 'sensor_channel' in features_df.columns:
+        unique_channels = sorted(features_df['sensor_channel'].astype(str).unique())
+        channel_to_idx = {ch: idx for idx, ch in enumerate(unique_channels)}
+        features_df['sensor_channel_idx'] = features_df['sensor_channel'].map(channel_to_idx).astype(int)
     
     return features_df
 

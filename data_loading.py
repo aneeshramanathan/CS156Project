@@ -88,6 +88,9 @@ def load_activity_data(dataset_path):
             acc_file = folder / 'Accelerometer.csv'
             df = pd.read_csv(acc_file)
             
+            # ------------------------------------------------------------------
+            # Optionally merge gyroscope data
+            # ------------------------------------------------------------------
             gyro_file = folder / 'Gyroscope.csv'
             if gyro_file.exists():
                 try:
@@ -105,6 +108,26 @@ def load_activity_data(dataset_path):
                                     df[col] = gyro_df[col].values
                 except Exception as e:
                     print(f"Warning: Could not merge gyroscope data for {folder_name}: {e}")
+
+            # ------------------------------------------------------------------
+            # Merge GPS speed (LocationGps.csv) to help distinguish walking vs cycling
+            # ------------------------------------------------------------------
+            gps_file = folder / 'LocationGps.csv'
+            if gps_file.exists():
+                try:
+                    gps_df = pd.read_csv(gps_file)
+                    
+                    merge_col = None
+                    if 'seconds_elapsed' in df.columns and 'seconds_elapsed' in gps_df.columns:
+                        merge_col = 'seconds_elapsed'
+                    elif 'time' in df.columns and 'time' in gps_df.columns:
+                        merge_col = 'time'
+                    
+                    if merge_col is not None and 'speed' in gps_df.columns:
+                        gps_subset = gps_df[[merge_col, 'speed']].copy()
+                        df = pd.merge(df, gps_subset, on=merge_col, how='left')
+                except Exception as e:
+                    print(f"Warning: Could not merge GPS data for {folder_name}: {e}")
             
             df['activity'] = activity_label
             participant_id = folder_name

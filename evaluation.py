@@ -6,11 +6,14 @@ from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
 from feature_extraction import extract_features_from_dataset
 from modeling import train_classical_models
-from utils import (
-    DEFAULT_SAMPLING_FREQUENCY, detect_platform,
-    StandardScaler, LabelEncoder, train_test_split,
+from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
+)
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.model_selection import train_test_split
+from utils import (
+    DEFAULT_SAMPLING_FREQUENCY, detect_platform
 )
 
 
@@ -57,6 +60,7 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
             'max_depth': 20,
             'min_samples_split': 5,
             'min_samples_leaf': 2,
+            'class_weight': 'balanced',
             'n_jobs': platform_info["optimal_n_jobs"],
             'random_state': 42
         }
@@ -176,8 +180,6 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
     Returns:
         DataFrame with window size comparison results
     """
-    from feature_extraction import extract_features_from_dataset
-    
     platform_info = detect_platform()
     
     window_results = []
@@ -196,12 +198,13 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
             X_ws_scaled, y_ws, test_size=0.2, random_state=42, stratify=y_ws
         )
         
-        # Use scikit-learn RandomForest model
+        # Use scikit-learn RandomForest model with class weighting for imbalanced data
         rf_ws = RandomForestClassifier(
             n_estimators=100,
             max_depth=20,
             min_samples_split=5,
             min_samples_leaf=2,
+            class_weight='balanced',
             n_jobs=platform_info["optimal_n_jobs"],
             random_state=42
         )

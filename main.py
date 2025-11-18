@@ -8,12 +8,14 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import warnings
+from collections import Counter
 warnings.filterwarnings('ignore')
 
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.model_selection import train_test_split
 from utils import (
     DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, DEFAULT_SAMPLING_FREQUENCY,
-    VISUALIZATIONS_DIR, ensure_visualizations_dir,
-    train_test_split, StandardScaler, LabelEncoder
+    VISUALIZATIONS_DIR, ensure_visualizations_dir
 )
 from data_loading import download_dataset, load_activity_data, create_dataset_summary
 from preprocessing import preprocess_signal, preprocess_dataset
@@ -58,7 +60,7 @@ def main():
         print(f"\nActivity types: {sorted(unique_labels)[:10]}")
     
     plot_dataset_exploration(data_list, metadata, output_dir / 'task1_dataset_exploration.png')
-    print("\n✓ Task 1 Complete: Dataset summary created")
+    print("\n[OK] Task 1 Complete: Dataset summary created")
     
     # ============================================================================
     # Task 2: Annotated Signal Exploration
@@ -94,7 +96,7 @@ def main():
         plot_annotated_signals(data_list, n_samples=3, 
                               output_path=output_dir / 'task2_annotated_signals.png')
     
-    print("\n✓ Task 2 Complete: Signal visualization finished")
+    print("\n[OK] Task 2 Complete: Signal visualization finished")
     
     # ============================================================================
     # Task 3: Signal Preprocessing
@@ -121,7 +123,7 @@ def main():
         print(f"Preprocessed signal std: {np.std(preprocessed):.4f}")
     
     preprocessed_data = preprocess_dataset(signal_data)
-    print("\n✓ Task 3 Complete: Signal preprocessing finished")
+    print("\n[OK] Task 3 Complete: Signal preprocessing finished")
     
     # ============================================================================
     # Task 4: Windowing Strategies
@@ -143,7 +145,7 @@ def main():
         plot_windowing_strategies(window_analysis_df, sample_signal, 
                                  output_path=output_dir / 'task4_windowing_strategies.png')
     
-    print("\n✓ Task 4 Complete: Windowing analysis finished")
+    print("\n[OK] Task 4 Complete: Windowing analysis finished")
     
     # ============================================================================
     # Task 5: Feature Extraction & Analysis
@@ -160,6 +162,7 @@ def main():
     print(f"\nExtracted {len(features_df)} feature vectors")
     print(f"Features: {len([c for c in features_df.columns if c not in ['label', 'participant', 'sensor_channel']])}")
     
+    # Start with all numeric feature columns (excluding label/metadata)
     feature_cols = [col for col in features_df.columns 
                    if col not in ['label', 'participant', 'sensor_channel']]
     
@@ -173,7 +176,13 @@ def main():
     print("\n=== TOP 15 MOST IMPORTANT FEATURES ===")
     print(importance_df.head(15).to_string(index=False))
     
-    print("\n✓ Task 5 Complete: Feature extraction finished")
+    # Feature selection: keep only the most discriminative features for modeling.
+    # This reduces noise and focuses the classifiers on the strongest signals.
+    top_features = importance_df.head(12)['feature'].tolist()
+    feature_cols = [col for col in features_df.columns 
+                   if (col in top_features) or (col in ['sensor_channel_idx'])]
+    
+    print("\n[OK] Task 5 Complete: Feature extraction finished")
     
     # ============================================================================
     # Task 6: Classical ML Modeling
@@ -182,6 +191,9 @@ def main():
     print("TASK 6: Classical ML Modeling")
     print("="*60)
     
+    # Each row in features_df is a single sensor window; y is the **current**
+    # activity label for that window (activity classification, not
+    # next-activity prediction).
     X = features_df[feature_cols].fillna(0)
     y = features_df['label']
     
@@ -206,14 +218,14 @@ def main():
     
     plot_model_comparison(results_df, output_path=output_dir / 'task6_model_comparison.png')
     
-    # Choose best model for downstream evaluation (Task 7)
+    # Choose best model for downstream evaluation (Task 7) based on macro F1
     model_names = [name for name in trained_models.keys()]
     best_rows = results_df[results_df['Model'].isin(model_names)]
-    best_model_name = best_rows.loc[best_rows['Accuracy'].idxmax(), 'Model']
+    best_model_name = best_rows.loc[best_rows['F1-Score'].idxmax(), 'Model']
     best_model = trained_models[best_model_name]
-    print(f"\nBest model: {best_model_name}")
+    print(f"\nBest model (by macro F1-Score): {best_model_name}")
     
-    print("\n✓ Task 6 Complete: Classical ML modeling finished")
+    print("\n[OK] Task 6 Complete: Classical ML modeling finished")
     
     # ============================================================================
     # Task 7: Advanced Evaluation
@@ -222,6 +234,8 @@ def main():
     print("TASK 7: Advanced Evaluation")
     print("="*60)
     
+    # Evaluate activity classification performance (per-window current activity)
+    # using both a standard train/test split and LOSO cross-validation.
     X_full = features_df[feature_cols].fillna(0).values
     y_full = le.fit_transform(features_df['label'])
     groups = features_df['participant'].values
@@ -276,16 +290,15 @@ def main():
             error_pairs.append((f"Class_{true_label}", f"Class_{pred_label}"))
     
     if error_pairs:
-        from collections import Counter
         error_counts = Counter(error_pairs)
         most_common_errors = error_counts.most_common(10)
-        print("\nMost common misclassifications:")
+        print("\nMost common classification errors (true -> predicted):")
         for (true_class, pred_class), count in most_common_errors:
-            print(f"  {true_class} → {pred_class}: {count} times")
+            print(f"  true={true_class}, predicted={pred_class}: {count} times")
         
         plot_error_analysis(error_pairs, output_path=output_dir / 'task7_error_analysis.png')
     
-    print("\n✓ Task 7 Complete: Advanced evaluation finished")
+    print("\n[OK] Task 7 Complete: Advanced evaluation finished")
     
     # ============================================================================
     # Summary
@@ -306,8 +319,8 @@ def main():
     print("  - task7_window_size_comparison.png")
     print("  - task7_confusion_matrix.png")
     print("  - task7_error_analysis.png")
-    print("  - X_seq_train.npy, X_seq_test.npy (DL data)")
-    print("  - y_seq_train.npy, y_seq_test.npy (DL labels)")
+    print("  - X_seq_train.npy, X_seq_test.npy (sequence data for deep activity classification models)")
+    print("  - y_seq_train.npy, y_seq_test.npy (sequence labels for activity classification)")
     print("="*60)
 
 
