@@ -9,6 +9,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+from collections import Counter
+from sklearn.preprocessing import LabelEncoder
 from utils import VISUALIZATIONS_DIR, DEFAULT_SAMPLING_FREQUENCY
 
 plt.style.use('default')
@@ -51,7 +53,9 @@ def plot_annotated_signals(data_list, n_samples, output_path):
     for item in data_list:
         if 'dataframe' in item:
             df = item['dataframe']
-            sensor_cols = [col for col in df.columns if any(x in col.lower() for x in ['acc', 'gyr', 'sensor', 'x', 'y', 'z'])]
+            # Include accelerometer, gyroscope, generic sensor axes, and GPS speed
+            sensor_cols = [col for col in df.columns 
+                           if any(x in col.lower() for x in ['acc', 'gyr', 'sensor', 'x', 'y', 'z', 'speed'])]
             label_cols = [col for col in df.columns if any(x in col.lower() for x in ['label', 'activity', 'class'])]
             
             if sensor_cols and label_cols:
@@ -215,9 +219,6 @@ def plot_feature_distributions(features_df, output_path):
 
 def plot_feature_importance(features_df, feature_cols, output_path):
     """Task 5: Plot feature importance using NumPy-based ANOVA F-score."""
-    import numpy as np
-    from utils import LabelEncoder
-    
     X = features_df[feature_cols].fillna(0).values
     y = LabelEncoder().fit_transform(features_df['label'])
     
@@ -460,8 +461,6 @@ def plot_confusion_matrix(cm, cm_normalized, class_names, output_path):
 
 def plot_error_analysis(error_pairs, output_path):
     """Task 7: Plot error analysis."""
-    from collections import Counter
-    
     error_counts = Counter(error_pairs)
     most_common_errors = error_counts.most_common(10)
     

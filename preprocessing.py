@@ -50,10 +50,15 @@ def preprocess_signal(signal_array, fs=DEFAULT_SAMPLING_FREQUENCY,
         b, a = scipy_signal.butter(4, high, btype='low')
         filtered_signal = scipy_signal.filtfilt(b, a, signal_copy)
     
+    # Robust outlier handling: softly clip extreme values instead of
+    # flattening them to the mean. This preserves the overall shape and
+    # variance of the signal while removing implausible spikes.
     mean = np.mean(filtered_signal)
     std = np.std(filtered_signal)
-    outlier_mask = np.abs(filtered_signal - mean) > 3 * std
-    filtered_signal[outlier_mask] = mean
+    if std > 0:
+        limit = 5 * std
+        diff = filtered_signal - mean
+        filtered_signal = mean + np.clip(diff, -limit, limit)
     
     return filtered_signal
 

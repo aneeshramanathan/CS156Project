@@ -2,6 +2,10 @@
 
 This module implements classical ML models using scikit-learn:
 Decision Tree, SVM, Naive Bayes, Random Forest, AdaBoost, and XGBoost.
+
+These models perform per-window activity classification: given hand-crafted
+features from a single sensor window, they predict the **current** activity
+for that window (not a next-activity or sequence prediction task).
 """
 
 import numpy as np
@@ -13,9 +17,9 @@ from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from utils import (
-    DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform,
-    accuracy_score, precision_score, recall_score, f1_score
+    DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
 )
 
 
@@ -72,8 +76,8 @@ def train_classical_models(X_train, y_train, X_test, y_test):
         'Random Forest': {
             'model_class': RandomForestClassifier,
             'params': {
-                'n_estimators': 100,
-                'max_depth': 20,
+                'n_estimators': 300,
+                'max_depth': None,  # No depth limit - let min_samples_* regularize
                 'min_samples_split': 5,
                 'min_samples_leaf': 2,
                 'class_weight': class_weight_dict,
@@ -87,7 +91,8 @@ def train_classical_models(X_train, y_train, X_test, y_test):
                 'n_estimators': 100,
                 'learning_rate': 0.1,
                 'random_state': 42
-            }
+            },
+            'class_weight': class_weight_dict
         },
     }
     
@@ -144,11 +149,11 @@ def train_classical_models(X_train, y_train, X_test, y_test):
     print("\nTraining XGBoost (true gradient-boosted trees)...")
     start_time = time.time()
     xgb = XGBClassifier(
-        n_estimators=100,
-        max_depth=6,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
+        n_estimators=300,
+        max_depth=8,
+        learning_rate=0.05,
+        subsample=0.9,
+        colsample_bytree=0.9,
         objective="multi:softmax",
         num_class=num_classes,
         eval_metric="mlogloss",
