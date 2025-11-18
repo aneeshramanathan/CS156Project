@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
-from feature_extraction import extract_features_from_dataset
-from modeling import train_classical_models
+from src.feature_extraction import extract_features_from_dataset
+from src.modeling import train_classical_models
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
 )
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
-from utils import (
+from src.utils import (
     DEFAULT_SAMPLING_FREQUENCY, detect_platform
 )
 

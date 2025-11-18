@@ -11,7 +11,7 @@ import seaborn as sns
 from pathlib import Path
 from collections import Counter
 from sklearn.preprocessing import LabelEncoder
-from utils import VISUALIZATIONS_DIR, DEFAULT_SAMPLING_FREQUENCY
+from src.utils import VISUALIZATIONS_DIR, DEFAULT_SAMPLING_FREQUENCY
 
 plt.style.use('default')
 sns.set_palette('husl')

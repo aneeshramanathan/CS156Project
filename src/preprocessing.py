@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy import signal as scipy_signal
 from scipy.interpolate import interp1d
-from utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_LOWCUT, DEFAULT_HIGHCUT
+from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_LOWCUT, DEFAULT_HIGHCUT
 
 
 def preprocess_signal(signal_array, fs=DEFAULT_SAMPLING_FREQUENCY, 

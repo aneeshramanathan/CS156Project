@@ -18,7 +18,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from utils import (
+from src.utils import (
     DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
 )
 

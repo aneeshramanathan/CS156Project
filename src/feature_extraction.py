@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
+from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
 
 # Minimum fraction of the majority label required in a window.
 # This helps drop ambiguous transition windows (e.g., half walking, half cycling).

@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP
+from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP
 
 
 def create_windows(signal, window_size=DEFAULT_WINDOW_SIZE, overlap=DEFAULT_OVERLAP):
