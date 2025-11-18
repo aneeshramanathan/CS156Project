@@ -1,33 +1,25 @@
-"""Task 6: Classical ML models using scikit-learn.
+"""Task 6: Classical ML models using scikit-learn."""
 
-This module implements classical ML models using scikit-learn:
-Decision Tree, SVM, Naive Bayes, Random Forest, AdaBoost, and XGBoost.
-
-These models perform per-window activity classification: given hand-crafted
-features from a single sensor window, they predict the **current** activity
-for that window (not a next-activity or sequence prediction task).
-"""
+import time
+from typing import Dict, Optional, Sequence
 
 import numpy as np
 import pandas as pd
-import time
-from typing import Dict, Optional, Sequence
-from xgboost import XGBClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import GaussianNB
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import (
-    RandomForestClassifier,
     AdaBoostClassifier,
     HistGradientBoostingClassifier,
+    RandomForestClassifier,
     VotingClassifier,
 )
-from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import LinearSVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils.class_weight import compute_class_weight
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from src.utils import (
-    DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
-)
+from xgboost import XGBClassifier
+
+from src.utils import detect_platform
 
 
 
@@ -40,23 +32,16 @@ def train_classical_models(
     class_names: Optional[Sequence[str]] = None,
     class_weight_overrides: Optional[Dict[str, float]] = None,
 ):
-    """
-    Train and evaluate classical ML models using scikit-learn (Task 6).
-    Implements Decision Tree, (calibrated) Linear SVM variants, Naive Bayes, Random Forest,
-    Hist Gradient Boosting, AdaBoost, XGBoost, and a soft-voting ensemble.
-    Returns: results DataFrame and trained models dictionary.
-    """
+    """Train and evaluate classical ML models using scikit-learn."""
     platform_info = detect_platform()
     
     print(f"\nPlatform detected: {platform_info['platform_name']}")
-    print(f"Using CPU-based scikit-learn models for classical ML algorithms")
     
     input_size = X_train.shape[1]
     num_classes = len(np.unique(y_train))
     
     print(f"Input features: {input_size}, Number of classes: {num_classes}")
     
-    # Compute class weights to handle imbalanced dataset (7 cycling, 3 sitting, 2 walking)
     classes = np.unique(y_train)
     class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
     class_weight_dict = {cls: weight for cls, weight in zip(classes, class_weights)}
@@ -75,7 +60,6 @@ def train_classical_models(
     
     sample_weights_train = np.array([class_weight_dict[y] for y in y_train])
     
-    # Define scikit-learn models with appropriate hyperparameters
     rf_params = {
         'n_estimators': 400,
         'max_depth': 60,
@@ -104,7 +88,7 @@ def train_classical_models(
         'tol': 1e-4,
         'class_weight': class_weight_dict,
         'random_state': 42,
-        'dual': False  # Faster for n_samples > n_features
+        'dual': False
     }
     
     def build_calibrated_svm(cv_folds: int = 3):
@@ -172,13 +156,6 @@ def train_classical_models(
     results = []
     trained_models = {}
     
-    # ---------------------------------------------------------------------
-    # Scikit-learn classical models
-    # Note: Using scikit-learn for classical ML algorithms (Decision Tree, SVM, etc.)
-    # is faster and more accurate than neural network approximations. These algorithms
-    # are optimized C/Cython implementations that solve the problem directly rather than
-    # using iterative gradient descent.
-    # ---------------------------------------------------------------------
     for name, config in models_config.items():
         print(f"\nTraining {name}...")
         
@@ -224,10 +201,7 @@ def train_classical_models(
         print(f"  Training time: {train_time:.2f}s")
         print(f"  Prediction time: {pred_time:.4f}s")
 
-    # ---------------------------------------------------------------------
-    # XGBoost model using the same features
-    # ---------------------------------------------------------------------
-    print("\nTraining XGBoost (true gradient-boosted trees)...")
+    print("\nTraining XGBoost...")
     start_time = time.time()
     xgb = XGBClassifier(
         n_estimators=300,
@@ -242,7 +216,6 @@ def train_classical_models(
         n_jobs=platform_info["optimal_n_jobs"],
         random_state=42,
     )
-    # Apply class weights as sample weights for XGBoost
     sample_weights = np.array([class_weight_dict[y] for y in y_train])
     xgb.fit(X_train, y_train, sample_weight=sample_weights)
     train_time = time.time() - start_time

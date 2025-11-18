@@ -1,17 +1,17 @@
 """All visualization and plotting functions."""
 
-# Set non-interactive backend for matplotlib to avoid threading/multiprocessing issues
 import matplotlib
-matplotlib.use('Agg')  # Must be set before importing pyplot
+matplotlib.use('Agg')
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
-from src.utils import VISUALIZATIONS_DIR, DEFAULT_SAMPLING_FREQUENCY
+
+from src.utils import DEFAULT_SAMPLING_FREQUENCY, VISUALIZATIONS_DIR
 
 plt.style.use('default')
 sns.set_palette('husl')

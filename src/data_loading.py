@@ -1,23 +1,14 @@
 """Task 1: Dataset exploration and loading functions."""
 
-from pathlib import Path
-import pandas as pd
-import numpy as np
-import kagglehub
 import shutil
+from pathlib import Path
+
+import kagglehub
+import numpy as np
+import pandas as pd
 
 
 def download_dataset(use_local_cache=True):
-    """
-    Download dataset from Kaggle and return path.
-    Uses local cache in project directory to avoid re-downloading.
-    
-    Args:
-        use_local_cache: If True, use/copy to local data/ directory
-    
-    Returns:
-        Path to dataset directory
-    """
     local_data_dir = Path("data")
     
     if use_local_cache and local_data_dir.exists():
@@ -56,11 +47,6 @@ def download_dataset(use_local_cache=True):
 
 
 def load_activity_data(dataset_path):
-    """
-    Load activity detection data from the dataset.
-    Extracts activity labels from folder names (e.g., Cycling-2023-09-14 -> 'cycling')
-    Loads Accelerometer.csv and Gyroscope.csv from each activity folder.
-    """
     data_list = []
     metadata = {
         'participants': set(),
@@ -88,9 +74,6 @@ def load_activity_data(dataset_path):
             acc_file = folder / 'Accelerometer.csv'
             df = pd.read_csv(acc_file)
             
-            # ------------------------------------------------------------------
-            # Optionally merge gyroscope data
-            # ------------------------------------------------------------------
             gyro_file = folder / 'Gyroscope.csv'
             if gyro_file.exists():
                 try:
@@ -109,9 +92,6 @@ def load_activity_data(dataset_path):
                 except Exception as e:
                     print(f"Warning: Could not merge gyroscope data for {folder_name}: {e}")
 
-            # ------------------------------------------------------------------
-            # Merge GPS speed (LocationGps.csv) to help distinguish walking vs cycling
-            # ------------------------------------------------------------------
             gps_file = folder / 'LocationGps.csv'
             if gps_file.exists():
                 try:
@@ -152,7 +132,6 @@ def load_activity_data(dataset_path):
 
 
 def create_dataset_summary(data_list, metadata):
-    """Create a comprehensive summary table of the dataset."""
     n_participants = len(metadata['participants'])
     
     participant_files = {}

@@ -1,12 +1,13 @@
 """Task 5: Feature extraction functions."""
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
 import numpy as np
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform
 
-# Minimum fraction of the majority label required in a window.
-# This helps drop ambiguous transition windows (e.g., half walking, half cycling).
+from src.utils import DEFAULT_OVERLAP, DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, detect_platform
+
+# Minimum fraction of majority label required in a window (drops ambiguous transition windows)
 MIN_LABEL_FRACTION = 0.8
 
 AXIS_TOKENS = {'x', 'y', 'z'}
@@ -17,7 +18,6 @@ SENSOR_HINTS = (
 
 
 def extract_time_domain_features(window):
-    """Extract time-domain features from a signal window."""
     features = {}
     
     window = np.asarray(window)
@@ -36,11 +36,10 @@ def extract_time_domain_features(window):
     features['range'] = features['max'] - features['min']
     features['median'] = np.median(window)
     
-    # Pure numpy skewness and kurtosis (replaces pandas)
     if std > 0:
         centered = (window - mean) / std
         features['skewness'] = np.mean(centered**3)
-        features['kurtosis'] = np.mean(centered**4) - 3.0  # excess kurtosis
+        features['kurtosis'] = np.mean(centered**4) - 3.0
     else:
         features['skewness'] = 0.0
         features['kurtosis'] = 0.0
@@ -52,16 +51,14 @@ def extract_time_domain_features(window):
 
 
 def _entropy(pk):
-    """Compute entropy using numpy (replaces scipy.stats.entropy)."""
     pk = np.asarray(pk)
-    pk = pk[pk > 0]  # Remove zeros
+    pk = pk[pk > 0]
     if len(pk) == 0:
         return 0.0
     return -np.sum(pk * np.log(pk))
 
 
 def extract_frequency_domain_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
-    """Extract frequency-domain features from a signal window."""
     features = {}
     
     N = len(window)
@@ -107,7 +104,6 @@ def extract_frequency_domain_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
 
 
 def extract_all_features(window, fs=DEFAULT_SAMPLING_FREQUENCY):
-    """Extract all features from a window."""
     time_features = extract_time_domain_features(window)
     freq_features = extract_frequency_domain_features(window, fs)
     all_features = {**time_features, **freq_features}
@@ -149,7 +145,6 @@ def _infer_group_and_axis(col_name: str):
 
 
 def _group_sensor_columns(preprocessed_cols):
-    """Group related sensor axes (e.g., x/y/z of accelerometer) together."""
     groups = {}
     for col in preprocessed_cols:
         group_hint, axis_hint, _ = _infer_group_and_axis(col)
@@ -255,20 +250,11 @@ def _extract_features_from_sensor_group(signals_dict, labels, group_name, partic
 
 def extract_features_from_dataset(preprocessed_data, window_size=DEFAULT_WINDOW_SIZE, 
                                    overlap=DEFAULT_OVERLAP, use_multiprocessing=True):
-    """
-    Extract features from entire dataset with optional multiprocessing.
-    
-    Args:
-        preprocessed_data: List of preprocessed data items
-        window_size: Size of sliding windows
-        overlap: Overlap ratio between windows
-        use_multiprocessing: Whether to use multiprocessing (default: True)
-    """
     platform_info = detect_platform()
     
     if use_multiprocessing:
         cpu_count = platform_info['cpu_count']
-        max_workers = max(1, cpu_count - 1)  # Use all cores except 1 to leave one for system
+        max_workers = max(1, cpu_count - 1)
         
         print(f"Using multiprocessing with {max_workers} workers for feature extraction...")
         
@@ -354,8 +340,6 @@ def extract_features_from_dataset(preprocessed_data, window_size=DEFAULT_WINDOW_
     features_df['label'] = all_labels
     features_df['participant'] = all_participants
     
-    # Encode sensor_channel (string) as a numeric feature so models can
-    # distinguish between accelerometer axes, gyroscope channels, GPS speed, etc.
     if 'sensor_channel' in features_df.columns:
         unique_channels = sorted(features_df['sensor_channel'].astype(str).unique())
         channel_to_idx = {ch: idx for idx, ch in enumerate(unique_channels)}

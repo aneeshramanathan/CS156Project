@@ -2,21 +2,12 @@
 
 import numpy as np
 import pandas as pd
-from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP
+
+from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_OVERLAP, DEFAULT_WINDOW_SIZE
 
 
 def create_windows(signal, window_size=DEFAULT_WINDOW_SIZE, overlap=DEFAULT_OVERLAP):
-    """
-    Create sliding windows from a signal.
-    
-    Args:
-        signal: Input signal array
-        window_size: Size of each window in samples
-        overlap: Overlap ratio between consecutive windows (0 to 1)
-    
-    Returns:
-        Array of windows
-    """
+    """Create sliding windows from a signal."""
     step_size = int(window_size * (1 - overlap))
     windows = []
     
@@ -28,18 +19,6 @@ def create_windows(signal, window_size=DEFAULT_WINDOW_SIZE, overlap=DEFAULT_OVER
 
 
 def analyze_window_sizes(signal, window_sizes, overlap=DEFAULT_OVERLAP, fs=DEFAULT_SAMPLING_FREQUENCY):
-    """
-    Analyze multiple window sizes and return statistics.
-    
-    Args:
-        signal: Input signal array
-        window_sizes: List of window sizes to test
-        overlap: Overlap ratio
-        fs: Sampling frequency
-    
-    Returns:
-        DataFrame with window analysis results
-    """
     window_analysis = []
     
     for ws in window_sizes:

@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from scipy import signal as scipy_signal
 from scipy.interpolate import interp1d
-from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_LOWCUT, DEFAULT_HIGHCUT
+
+from src.utils import DEFAULT_HIGHCUT, DEFAULT_LOWCUT, DEFAULT_SAMPLING_FREQUENCY
 
 
 TIME_LIKE_TOKENS = ('time', 'timestamp', 'seconds_elapsed')
@@ -24,19 +25,7 @@ def _should_use_sensor_column(col_name: str) -> bool:
 def preprocess_signal(signal_array, fs=DEFAULT_SAMPLING_FREQUENCY, 
                       lowcut=DEFAULT_LOWCUT, highcut=DEFAULT_HIGHCUT, 
                       interpolate_missing=True):
-    """
-    Preprocess sensor signals with filtering and interpolation.
-    
-    Args:
-        signal_array: Input signal
-        fs: Sampling frequency
-        lowcut: Low cutoff frequency for bandpass filter
-        highcut: High cutoff frequency for bandpass filter
-        interpolate_missing: Whether to interpolate NaN values
-    
-    Returns:
-        Preprocessed signal
-    """
+    """Preprocess sensor signals with filtering and interpolation."""
     signal_copy = signal_array.copy()
     
     if interpolate_missing and np.any(np.isnan(signal_copy)):
@@ -64,9 +53,7 @@ def preprocess_signal(signal_array, fs=DEFAULT_SAMPLING_FREQUENCY,
         b, a = scipy_signal.butter(4, high, btype='low')
         filtered_signal = scipy_signal.filtfilt(b, a, signal_copy)
     
-    # Robust outlier handling: softly clip extreme values instead of
-    # flattening them to the mean. This preserves the overall shape and
-    # variance of the signal while removing implausible spikes.
+    # Softly clip extreme values to preserve signal shape while removing spikes
     mean = np.mean(filtered_signal)
     std = np.std(filtered_signal)
     if std > 0:

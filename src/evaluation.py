@@ -2,24 +2,23 @@
 
 import numpy as np
 import pandas as pd
-from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
-from src.feature_extraction import extract_features_from_dataset
-from src.modeling import train_classical_models
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, classification_report
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
 )
-from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
-from src.utils import (
-    DEFAULT_SAMPLING_FREQUENCY, detect_platform
-)
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+from src.feature_extraction import extract_features_from_dataset
+from src.utils import DEFAULT_SAMPLING_FREQUENCY, detect_platform
 
 
 def evaluate_standard_split(model, X_train, y_train, X_test, y_test):
-    """Evaluate scikit-learn model with standard 80/20 split."""
-    # Scikit-learn model evaluation
     y_pred = model.predict(X_test)
     y_true = y_test
     
@@ -38,19 +37,6 @@ def evaluate_standard_split(model, X_train, y_train, X_test, y_test):
 
 
 def evaluate_loso(X, y, groups, model_class=None, model_params=None):
-    """
-    Evaluate using Leave-One-Subject-Out cross-validation with scikit-learn models.
-    
-    Args:
-        X: Feature matrix
-        y: Labels
-        groups: Group labels (participant IDs)
-        model_class: Model class to use (defaults to RandomForestClassifier)
-        model_params: Dictionary of model parameters
-    
-    Returns:
-        Dictionary with LOSO metrics
-    """
     platform_info = detect_platform()
     if model_class is None:
         model_class = RandomForestClassifier
@@ -78,7 +64,6 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         
-        # Use a simple scikit-learn model for evaluation
         model_cv = model_class(**model_params)
         model_cv.fit(X_scaled, y)
         y_pred = model_cv.predict(X_scaled)
@@ -99,8 +84,6 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
     print(f"Using scikit-learn {model_class.__name__}")
     
     X = np.asarray(X)
-    
-    # Manual LOSO implementation: iterate over unique groups
     unique_groups = np.unique(groups)
     loso_scores = []
     loso_predictions = []
@@ -110,7 +93,6 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
     
     fold = 1
     for test_group in unique_groups:
-        # Split: test on current group, train on all others
         test_mask = groups == test_group
         train_mask = ~test_mask
         
@@ -122,11 +104,8 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
         y_train_fold = y[train_idx]
         y_test_fold = y[test_idx]
         
-        # Train scikit-learn model
         model_fold = model_class(**model_params)
         model_fold.fit(X_train_fold, y_train_fold)
-        
-        # Evaluate
         y_pred_fold = model_fold.predict(X_test_fold)
         
         acc = accuracy_score(y_test_fold, y_pred_fold)
@@ -167,18 +146,6 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
 
 def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func, 
                         label_encoder):
-    """
-    Compare performance across different window sizes.
-    
-    Args:
-        preprocessed_data: Preprocessed dataset
-        window_sizes: List of window sizes to test
-        feature_cols_func: Function to get feature columns from features_df
-        label_encoder: Fitted LabelEncoder
-    
-    Returns:
-        DataFrame with window size comparison results
-    """
     platform_info = detect_platform()
     
     window_results = []
@@ -199,7 +166,6 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
             X_ws_scaled, y_ws, test_size=0.2, random_state=42, stratify=y_ws
         )
         
-        # Use scikit-learn RandomForest model with class weighting for imbalanced data
         rf_ws = RandomForestClassifier(
             n_estimators=100,
             max_depth=20,
@@ -234,7 +200,6 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
 
 
 def generate_confusion_matrix(y_true, y_pred, class_names):
-    """Generate confusion matrix."""
     cm = confusion_matrix(y_true, y_pred)
     
     unique_classes = np.unique(np.concatenate([y_true, y_pred]))
@@ -249,7 +214,6 @@ def generate_confusion_matrix(y_true, y_pred, class_names):
 
 
 def generate_classification_report(y_true, y_pred, class_names):
-    """Generate classification report."""
     unique_classes = np.unique(np.concatenate([y_true, y_pred]))
     if len(class_names) > len(unique_classes):
         target_names = [class_names[i] for i in unique_classes]
