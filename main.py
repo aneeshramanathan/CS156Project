@@ -208,9 +208,12 @@ def main():
     
     plot_model_comparison(results_df, output_path=output_dir / 'task6_model_comparison.png')
     
-    best_model_name = results_df.loc[results_df['Accuracy'].idxmax(), 'Model']
+    # Choose best PyTorch model for downstream PyTorch-based evaluation (Task 7)
+    pytorch_model_names = [name for name in trained_models.keys() if name != "XGBoost"]
+    best_pytorch_rows = results_df[results_df['Model'].isin(pytorch_model_names)]
+    best_model_name = best_pytorch_rows.loc[best_pytorch_rows['Accuracy'].idxmax(), 'Model']
     best_model = trained_models[best_model_name]
-    print(f"\nBest model: {best_model_name}")
+    print(f"\nBest PyTorch model: {best_model_name}")
     
     X_seq, y_seq = create_sequences_for_dl(preprocessed_data, 
                                            window_size=DEFAULT_WINDOW_SIZE, 
@@ -259,6 +262,8 @@ def main():
     plot_evaluation_comparison(evaluation_comparison, 
                                output_path=output_dir / 'task7_evaluation_comparison.png')
     
+    # Task 7: compare at least 10 window sizes for both standard split and LOSO,
+    # mirroring the Task 4 analysis.
     window_sizes_test = [25, 50, 75, 100, 125, 150, 175, 200, 250, 300]
     window_results_df = compare_window_sizes(preprocessed_data, window_sizes_test, 
                                             lambda df: feature_cols, le, scaler)

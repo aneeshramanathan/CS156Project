@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from xgboost import XGBClassifier
 from utils import (
     DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform, get_device,
     accuracy_score, precision_score, recall_score, f1_score
@@ -128,13 +129,38 @@ class AdaBoostNN(nn.Module):
         return self.network(x)
 
 
-def train_pytorch_model(model, train_loader, device, epochs=50, lr=0.001):
-    """Train a PyTorch model."""
-    criterion = nn.CrossEntropyLoss()
+def train_pytorch_model(model, train_loader, device, epochs=50, lr=0.001, 
+                       class_weights=None, early_stopping=True, patience=5, val_loader=None):
+    """
+    Train a PyTorch model with optional early stopping and class weighting.
+    
+    Args:
+        model: PyTorch model to train
+        train_loader: DataLoader for training data
+        device: Device to train on
+        epochs: Maximum number of epochs
+        lr: Learning rate
+        class_weights: Optional class weights for imbalanced data (list or tensor)
+        early_stopping: Whether to use early stopping
+        patience: Number of epochs to wait before stopping
+        val_loader: Optional validation DataLoader for early stopping
+    """
+    if class_weights is not None:
+        if isinstance(class_weights, (list, np.ndarray)):
+            class_weights_tensor = torch.FloatTensor(class_weights).to(device)
+        else:
+            class_weights_tensor = class_weights.to(device)
+        criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
+    else:
+        criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    
+    best_val_loss = float('inf')
+    patience_counter = 0
     
     model.train()
     for epoch in range(epochs):
+        epoch_loss = 0
         for X_batch, y_batch in train_loader:
             X_batch, y_batch = X_batch.to(device), y_batch.to(device)
             
@@ -143,6 +169,27 @@ def train_pytorch_model(model, train_loader, device, epochs=50, lr=0.001):
             loss = criterion(outputs, y_batch)
             loss.backward()
             optimizer.step()
+            epoch_loss += loss.item()
+        
+        # Early stopping check
+        if early_stopping and val_loader is not None:
+            model.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for X_batch, y_batch in val_loader:
+                    X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+                    outputs = model(X_batch)
+                    val_loss += criterion(outputs, y_batch).item()
+            val_loss /= len(val_loader)
+            model.train()
+            
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= patience:
+                    break
     
     return model
 
@@ -203,8 +250,9 @@ def create_sequences_for_dl(preprocessed_data, window_size=DEFAULT_WINDOW_SIZE,
 
 def train_classical_models(X_train, y_train, X_test, y_test):
     """
-    Train and evaluate PyTorch neural network models.
-    Returns: results DataFrame and trained models dictionary
+    Train and evaluate PyTorch neural network models (Task 6).
+    Uses a larger batch size, fewer max epochs, and early stopping for faster training.
+    Returns: results DataFrame and trained models dictionary.
     """
     device, device_name = get_device()
     platform_info = detect_platform()
@@ -225,35 +273,49 @@ def train_classical_models(X_train, y_train, X_test, y_test):
     train_dataset = FeatureDataset(X_train, y_train)
     test_dataset = FeatureDataset(X_test, y_test)
     
-    batch_size = 64
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    batch_size = 128
     
-    # Define models with appropriate architectures
+    # Create a small validation split from the training data for early stopping
+    val_size = max(1, int(0.1 * len(train_dataset)))
+    train_size = len(train_dataset) - val_size
+    if train_size > 0 and val_size > 0:
+        train_subset, val_subset = torch.utils.data.random_split(
+            train_dataset, [train_size, val_size],
+            generator=torch.Generator().manual_seed(42)
+        )
+        train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=0)
+        val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, num_workers=0)
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+        val_loader = None
+    
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    
+    # Define models with appropriate architectures and reduced max epochs
     models_config = {
         'Decision Tree': {
             'model_class': DecisionTreeNN,
-            'epochs': 30,
+            'epochs': 20,
             'lr': 0.001
         },
         'SVM': {
             'model_class': SVMLikeNN,
-            'epochs': 50,
+            'epochs': 30,
             'lr': 0.001
         },
         'Naive Bayes': {
             'model_class': NaiveBayesNN,
-            'epochs': 30,
+            'epochs': 20,
             'lr': 0.001
         },
         'Random Forest': {
             'model_class': RandomForestNN,
-            'epochs': 50,
+            'epochs': 30,
             'lr': 0.001
         },
         'AdaBoost': {
             'model_class': AdaBoostNN,
-            'epochs': 40,
+            'epochs': 25,
             'lr': 0.001
         },
     }
@@ -261,6 +323,9 @@ def train_classical_models(X_train, y_train, X_test, y_test):
     results = []
     trained_models = {}
     
+    # ---------------------------------------------------------------------
+    # PyTorch "classical" models
+    # ---------------------------------------------------------------------
     for name, config in models_config.items():
         print(f"\nTraining {name}...")
         
@@ -274,8 +339,15 @@ def train_classical_models(X_train, y_train, X_test, y_test):
             print(f"  ⚠ Model loaded on {model_device.type.upper()}")
         
         start_time = time.time()
-        train_pytorch_model(model, train_loader, device, 
-                          epochs=config['epochs'], lr=config['lr'])
+        train_pytorch_model(
+            model,
+            train_loader,
+            device,
+            epochs=config['epochs'],
+            lr=config['lr'],
+            early_stopping=(val_loader is not None),
+            val_loader=val_loader,
+        )
         train_time = time.time() - start_time
         
         start_time = time.time()
@@ -305,6 +377,56 @@ def train_classical_models(X_train, y_train, X_test, y_test):
         print(f"  F1-Score: {f1:.4f}")
         print(f"  Training time: {train_time:.2f}s")
         print(f"  Prediction time: {pred_time:.4f}s")
+
+    # ---------------------------------------------------------------------
+    # XGBoost model using the same features
+    # ---------------------------------------------------------------------
+    print("\nTraining XGBoost (true gradient-boosted trees)...")
+    start_time = time.time()
+    xgb = XGBClassifier(
+        n_estimators=100,
+        max_depth=6,
+        learning_rate=0.1,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        objective="multi:softmax",
+        num_class=num_classes,
+        eval_metric="mlogloss",
+        tree_method="hist",
+        n_jobs=platform_info["optimal_n_jobs"],
+        random_state=42,
+    )
+    xgb.fit(X_train, y_train)
+    train_time = time.time() - start_time
+
+    start_time = time.time()
+    y_pred = xgb.predict(X_test)
+    pred_time = time.time() - start_time
+
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="macro", zero_division=0)
+    recall = recall_score(y_test, y_pred, average="macro", zero_division=0)
+    f1 = f1_score(y_test, y_pred, average="macro", zero_division=0)
+
+    results.append({
+        "Model": "XGBoost",
+        "Accuracy": accuracy,
+        "Precision": precision,
+        "Recall": recall,
+        "F1-Score": f1,
+        "Train Time (s)": train_time,
+        "Pred Time (s)": pred_time,
+    })
+
+    # We store it, but downstream advanced evaluation still uses PyTorch models only
+    trained_models["XGBoost"] = xgb  # type: ignore
+
+    print(f"  Accuracy: {accuracy:.4f}")
+    print(f"  Precision: {precision:.4f}")
+    print(f"  Recall: {recall:.4f}")
+    print(f"  F1-Score: {f1:.4f}")
+    print(f"  Training time: {train_time:.2f}s")
+    print(f"  Prediction time: {pred_time:.4f}s")
     
     results_df = pd.DataFrame(results)
     return results_df, trained_models

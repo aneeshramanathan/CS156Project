@@ -87,8 +87,12 @@ def plot_annotated_signals(data_list, n_samples, output_path):
                 mask = labels == label
                 indices = np.where(mask)[0]
                 if len(indices) > 0:
-                    for start, end in zip(indices[::100], indices[1::100]):
-                        axes[idx].axvspan(start, end, alpha=0.2, label=f'Activity: {label}' if i < 5 else '')
+                    # Only add label to first region to avoid duplicate legend entries
+                    label_added = False
+                    for j, (start, end) in enumerate(zip(indices[::100], indices[1::100])):
+                        label_text = f'Activity: {label}' if not label_added and i < 5 else ''
+                        axes[idx].axvspan(start, end, alpha=0.2, label=label_text)
+                        label_added = True
         
         axes[idx].set_xlabel('Time (samples)')
         axes[idx].set_ylabel('Amplitude')
