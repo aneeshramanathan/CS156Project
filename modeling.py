@@ -12,6 +12,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.utils.class_weight import compute_class_weight
 from utils import (
     DEFAULT_WINDOW_SIZE, DEFAULT_OVERLAP, detect_platform,
     accuracy_score, precision_score, recall_score, f1_score
@@ -36,6 +37,12 @@ def train_classical_models(X_train, y_train, X_test, y_test):
     
     print(f"Input features: {input_size}, Number of classes: {num_classes}")
     
+    # Compute class weights to handle imbalanced dataset (7 cycling, 3 sitting, 2 walking)
+    classes = np.unique(y_train)
+    class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
+    class_weight_dict = {cls: weight for cls, weight in zip(classes, class_weights)}
+    print(f"Class weights: {class_weight_dict}")
+    
     # Define scikit-learn models with appropriate hyperparameters
     models_config = {
         'Decision Tree': {
@@ -44,6 +51,7 @@ def train_classical_models(X_train, y_train, X_test, y_test):
                 'max_depth': 20,
                 'min_samples_split': 5,
                 'min_samples_leaf': 2,
+                'class_weight': class_weight_dict,
                 'random_state': 42
             }
         },
@@ -52,6 +60,7 @@ def train_classical_models(X_train, y_train, X_test, y_test):
             'params': {
                 'C': 1.0,
                 'max_iter': 2000,
+                'class_weight': class_weight_dict,
                 'random_state': 42,
                 'dual': False  # Faster for n_samples > n_features
             }
@@ -67,6 +76,7 @@ def train_classical_models(X_train, y_train, X_test, y_test):
                 'max_depth': 20,
                 'min_samples_split': 5,
                 'min_samples_leaf': 2,
+                'class_weight': class_weight_dict,
                 'n_jobs': platform_info["optimal_n_jobs"],
                 'random_state': 42
             }
@@ -146,7 +156,9 @@ def train_classical_models(X_train, y_train, X_test, y_test):
         n_jobs=platform_info["optimal_n_jobs"],
         random_state=42,
     )
-    xgb.fit(X_train, y_train)
+    # Apply class weights as sample weights for XGBoost
+    sample_weights = np.array([class_weight_dict[y] for y in y_train])
+    xgb.fit(X_train, y_train, sample_weight=sample_weights)
     train_time = time.time() - start_time
 
     start_time = time.time()

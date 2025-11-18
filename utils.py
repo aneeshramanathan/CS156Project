@@ -13,7 +13,7 @@ DEFAULT_LOWCUT = 0.3
 DEFAULT_HIGHCUT = 20
 
 # Windowing defaults
-DEFAULT_WINDOW_SIZE = 150
+DEFAULT_WINDOW_SIZE = 300
 DEFAULT_OVERLAP = 0.5
 
 # Visualization output directory

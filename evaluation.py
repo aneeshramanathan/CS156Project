@@ -57,6 +57,7 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
             'max_depth': 20,
             'min_samples_split': 5,
             'min_samples_leaf': 2,
+            'class_weight': 'balanced',
             'n_jobs': platform_info["optimal_n_jobs"],
             'random_state': 42
         }
@@ -196,12 +197,13 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
             X_ws_scaled, y_ws, test_size=0.2, random_state=42, stratify=y_ws
         )
         
-        # Use scikit-learn RandomForest model
+        # Use scikit-learn RandomForest model with class weighting for imbalanced data
         rf_ws = RandomForestClassifier(
             n_estimators=100,
             max_depth=20,
             min_samples_split=5,
             min_samples_leaf=2,
+            class_weight='balanced',
             n_jobs=platform_info["optimal_n_jobs"],
             random_state=42
         )
