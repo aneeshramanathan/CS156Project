@@ -13,9 +13,9 @@ DEFAULT_LOWCUT = 0.3
 DEFAULT_HIGHCUT = 20
 
 # Windowing defaults
-# Based on the Task 7 window-size comparison, 250 samples (~5s) gave the best
-# trade-off between performance and temporal resolution for activity classification.
-DEFAULT_WINDOW_SIZE = 250
+# Task 7's expanded sweep showed 300 samples (~6s) consistently yielded the
+# highest accuracy/F1 for the EdgeImpulse dataset, so we adopt it as default.
+DEFAULT_WINDOW_SIZE = 300
 DEFAULT_OVERLAP = 0.5
 
 # Visualization output directory

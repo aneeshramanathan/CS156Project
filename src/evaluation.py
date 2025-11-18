@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
-from feature_extraction import extract_features_from_dataset
-from modeling import train_classical_models
+from src.feature_extraction import extract_features_from_dataset
+from src.modeling import train_classical_models
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
 )
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
-from utils import (
+from src.utils import (
     DEFAULT_SAMPLING_FREQUENCY, detect_platform
 )
 
@@ -98,8 +98,7 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
     print(f"Participants: {unique_participants}")
     print(f"Using scikit-learn {model_class.__name__}")
     
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    X = np.asarray(X)
     
     # Manual LOSO implementation: iterate over unique groups
     unique_groups = np.unique(groups)
@@ -117,8 +116,9 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
         
         train_idx = np.where(train_mask)[0]
         test_idx = np.where(test_mask)[0]
-        X_train_fold = X_scaled[train_idx]
-        X_test_fold = X_scaled[test_idx]
+        scaler_fold = StandardScaler()
+        X_train_fold = scaler_fold.fit_transform(X[train_idx])
+        X_test_fold = scaler_fold.transform(X[test_idx])
         y_train_fold = y[train_idx]
         y_test_fold = y[test_idx]
         
@@ -166,7 +166,7 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
 
 
 def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func, 
-                        label_encoder, scaler):
+                        label_encoder):
     """
     Compare performance across different window sizes.
     
@@ -175,7 +175,6 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
         window_sizes: List of window sizes to test
         feature_cols_func: Function to get feature columns from features_df
         label_encoder: Fitted LabelEncoder
-        scaler: Fitted StandardScaler
     
     Returns:
         DataFrame with window size comparison results
@@ -189,10 +188,12 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
         
         features_ws = extract_features_from_dataset(preprocessed_data, window_size=ws, overlap=0.5)
         
-        X_ws = features_ws[feature_cols_func(features_ws)].fillna(0).values
+        feature_columns = feature_cols_func(features_ws)
+        X_ws = features_ws[feature_columns].fillna(0).values
         y_ws = label_encoder.fit_transform(features_ws['label'])
         
-        X_ws_scaled = scaler.fit_transform(X_ws)
+        scaler_ws = StandardScaler()
+        X_ws_scaled = scaler_ws.fit_transform(X_ws)
         
         X_train_ws, X_test_ws, y_train_ws, y_test_ws = train_test_split(
             X_ws_scaled, y_ws, test_size=0.2, random_state=42, stratify=y_ws
