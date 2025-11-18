@@ -15,7 +15,7 @@ from xgboost import XGBClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, HistGradientBoostingClassifier
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from src.utils import (
@@ -62,8 +62,9 @@ def train_classical_models(X_train, y_train, X_test, y_test):
         'SVM': {
             'model_class': LinearSVC,
             'params': {
-                'C': 1.0,
-                'max_iter': 2000,
+                'C': 5.0,
+                'max_iter': 5000,
+                'tol': 1e-4,
                 'class_weight': class_weight_dict,
                 'random_state': 42,
                 'dual': False  # Faster for n_samples > n_features
@@ -76,13 +77,27 @@ def train_classical_models(X_train, y_train, X_test, y_test):
         'Random Forest': {
             'model_class': RandomForestClassifier,
             'params': {
-                'n_estimators': 300,
-                'max_depth': None,  # No depth limit - let min_samples_* regularize
-                'min_samples_split': 5,
-                'min_samples_leaf': 2,
+                'n_estimators': 400,
+                'max_depth': 60,
+                'min_samples_split': 6,
+                'min_samples_leaf': 4,
+                'max_features': 'sqrt',
+                'bootstrap': True,
                 'class_weight': class_weight_dict,
                 'n_jobs': platform_info["optimal_n_jobs"],
                 'random_state': 42
+            }
+        },
+        'Hist Gradient Boosting': {
+            'model_class': HistGradientBoostingClassifier,
+            'params': {
+                'learning_rate': 0.08,
+                'max_depth': 8,
+                'max_iter': 300,
+                'l2_regularization': 1e-3,
+                'class_weight': class_weight_dict,
+                'random_state': 42,
+                'early_stopping': False
             }
         },
         'AdaBoost': {

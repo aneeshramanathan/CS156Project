@@ -7,6 +7,20 @@ from scipy.interpolate import interp1d
 from src.utils import DEFAULT_SAMPLING_FREQUENCY, DEFAULT_LOWCUT, DEFAULT_HIGHCUT
 
 
+TIME_LIKE_TOKENS = ('time', 'timestamp', 'seconds_elapsed')
+LABEL_LIKE_TOKENS = ('activity', 'label', 'annotation')
+
+
+def _should_use_sensor_column(col_name: str) -> bool:
+    """Filter out metadata/time columns that masquerade as sensors."""
+    lowered = col_name.lower()
+    if any(token in lowered for token in TIME_LIKE_TOKENS):
+        return False
+    if any(token in lowered for token in LABEL_LIKE_TOKENS):
+        return False
+    return True
+
+
 def preprocess_signal(signal_array, fs=DEFAULT_SAMPLING_FREQUENCY, 
                       lowcut=DEFAULT_LOWCUT, highcut=DEFAULT_HIGHCUT, 
                       interpolate_missing=True):
@@ -69,7 +83,8 @@ def preprocess_dataset(signal_data):
     
     for item in signal_data:
         df = item['df'].copy()
-        sensor_cols = item['sensor_cols']
+        raw_sensor_cols = item['sensor_cols']
+        sensor_cols = [col for col in raw_sensor_cols if _should_use_sensor_column(col)]
         
         for col in sensor_cols:
             numeric_data = pd.to_numeric(df[col], errors='coerce')

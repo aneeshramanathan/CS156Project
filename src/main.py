@@ -178,9 +178,11 @@ def main():
     
     # Feature selection: keep only the most discriminative features for modeling.
     # This reduces noise and focuses the classifiers on the strongest signals.
-    top_features = importance_df.head(12)['feature'].tolist()
+    top_feature_count = 30
+    top_features = importance_df.head(top_feature_count)['feature'].tolist()
+    preserved_cols = {'sensor_channel_idx'}
     feature_cols = [col for col in features_df.columns 
-                   if (col in top_features) or (col in ['sensor_channel_idx'])]
+                   if (col in top_features) or (col in preserved_cols)]
     
     print("\n[OK] Task 5 Complete: Feature extraction finished")
     
@@ -194,18 +196,19 @@ def main():
     # Each row in features_df is a single sensor window; y is the **current**
     # activity label for that window (activity classification, not
     # next-activity prediction).
-    X = features_df[feature_cols].fillna(0)
+    X = features_df[feature_cols].fillna(0).values
     y = features_df['label']
     
     le = LabelEncoder()
     y_encoded = le.fit_transform(y)
     
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
+    X_train_raw, X_test_raw, y_train, y_test = train_test_split(
+        X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
     )
+    
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train_raw)
+    X_test = scaler.transform(X_test_raw)
     
     print(f"Training set size: {len(X_train)}")
     print(f"Test set size: {len(X_test)}")
@@ -240,7 +243,17 @@ def main():
     y_full = le.fit_transform(features_df['label'])
     groups = features_df['participant'].values
     
-    loso_results = evaluate_loso(X_full, y_full, groups)
+    try:
+        best_model_params = best_model.get_params()
+    except Exception:
+        best_model_params = None
+    loso_results = evaluate_loso(
+        X_full,
+        y_full,
+        groups,
+        model_class=best_model.__class__,
+        model_params=best_model_params
+    )
     
     standard_results = evaluate_standard_split(best_model, X_train, y_train, X_test, y_test)
     
@@ -261,8 +274,12 @@ def main():
     # Task 7: compare at least 10 window sizes for both standard split and LOSO,
     # mirroring the Task 4 analysis.
     window_sizes_test = [25, 50, 75, 100, 125, 150, 175, 200, 250, 300]
-    window_results_df = compare_window_sizes(preprocessed_data, window_sizes_test, 
-                                            lambda df: feature_cols, le, scaler)
+    window_results_df = compare_window_sizes(
+        preprocessed_data,
+        window_sizes_test,
+        lambda df: [c for c in feature_cols if c in df.columns],
+        le
+    )
     
     print("\n=== WINDOW SIZE COMPARISON TABLE ===")
     print(window_results_df.to_string(index=False))
