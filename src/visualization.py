@@ -205,12 +205,23 @@ def plot_feature_distributions(features_df, output_path):
                    'spectral_energy', 'spectral_entropy', 'skewness', 'kurtosis']
     
     for idx, col in enumerate(feature_cols):
-        if col in features_df.columns:
-            axes[idx].hist(features_df[col], bins=30, alpha=0.7, edgecolor='black')
-            axes[idx].set_title(f'{col.replace("_", " ").title()}', fontweight='bold')
-            axes[idx].set_xlabel('Value')
-            axes[idx].set_ylabel('Frequency')
-            axes[idx].grid(True, alpha=0.3)
+        matching_cols = [
+            c for c in features_df.columns
+            if c == col or c.endswith(f"_{col}") or c.endswith(f"-{col}")
+        ]
+        
+        if matching_cols:
+            stacked_values = features_df[matching_cols].values.ravel()
+            stacked_values = stacked_values[~np.isnan(stacked_values)]
+            
+            if stacked_values.size > 0:
+                axes[idx].hist(stacked_values, bins=30, alpha=0.7, edgecolor='black')
+                axes[idx].set_title(f'{col.replace("_", " ").title()}', fontweight='bold')
+                axes[idx].set_xlabel('Value')
+                axes[idx].set_ylabel('Frequency')
+                axes[idx].grid(True, alpha=0.3)
+        else:
+            axes[idx].axis('off')
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
