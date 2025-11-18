@@ -1,0 +1,205 @@
+============================================================
+ACTIVITY DETECTION ANALYSIS - COMPREHENSIVE PIPELINE
+============================================================
+
+============================================================
+TASK 1: Dataset Exploration
+============================================================
+Using local cache in C:\Users\joshd\school\cs156\CS156Project\data
+Found 12 activity folders in local cache
+Loading real data from activity folders...
+Found 12 activity folders
+Successfully loaded 12 activity sessions
+Activity types found: {'cycling', 'walking', 'sitting'}
+
+=== DATASET SUMMARY TABLE ===
+                   Metric Value
+   Number of Participants    12
+Avg Files per Participant   1.0
+  Total Labels/Activities    12
+    Unique Activity Types     3
+         Total Data Files    12
+
+Activity types: ['cycling', 'sitting', 'walking']
+
+✓ Task 1 Complete: Dataset summary created
+
+============================================================
+TASK 2: Annotated Signal Exploration
+============================================================
+
+✓ Task 2 Complete: Signal visualization finished
+
+============================================================
+TASK 3: Signal Preprocessing
+============================================================
+Missing data points: 3964
+After preprocessing: 0
+Original signal std: 51.9156
+Preprocessed signal std: 0.0000
+
+✓ Task 3 Complete: Signal preprocessing finished
+
+============================================================
+TASK 4: Windowing Strategies
+============================================================
+
+=== WINDOWING ANALYSIS ===
+ window_size  n_windows  coverage  time_duration_sec
+          25       5986  1.041609                0.5
+          50       2872  0.999680                1.0
+          75       1940  1.013076                1.5
+         100       1435  0.999332                2.0
+         125       1157  1.007335                2.5
+         150        956  0.998984                3.0
+         175        824  1.004725                3.5
+         200        717  0.999332                4.0
+         250        573  0.998636                5.0
+         300        477  0.997940                6.0
+         400        358  0.999332                8.0
+         500        286  0.998636               10.0
+
+✓ Task 4 Complete: Windowing analysis finished
+
+============================================================
+TASK 5: Feature Extraction & Analysis
+============================================================
+Extracting features from all data...
+Using multiprocessing with 31 workers for feature extraction...
+  Processed 108/108 sensor columns...
+  Completed processing all 108 sensor columns
+
+Extracted 332946 feature vectors
+Features: 18
+
+=== TOP 15 MOST IMPORTANT FEATURES ===
+          feature  importance
+     peak_to_peak    0.101556
+            range    0.101556
+              std    0.101187
+              rms    0.101094
+              min    0.099743
+              mad    0.098529
+              max    0.095153
+  spectral_energy    0.083490
+spectral_centroid    0.065012
+ spectral_rolloff    0.063658
+ spectral_entropy    0.048456
+              zcr    0.016543
+  spectral_spread    0.011107
+             mean    0.004061
+    dominant_freq    0.003043
+
+✓ Task 5 Complete: Feature extraction finished
+
+============================================================
+TASK 6: Classical ML Modeling
+============================================================
+Training set size: 266358
+Test set size: 66588
+Number of classes: 3
+
+Platform detected: Windows AMD64
+Using device: CUDA (NVIDIA GPU: NVIDIA GeForce RTX 5070 Ti, CUDA 12.8, Compute 12.0, 1 device(s))
+Input features: 18, Number of classes: 3
+
+Training Decision Tree...
+  ✓ Model loaded on GPU: NVIDIA GeForce RTX 5070 Ti
+  Accuracy: 0.7737
+  Precision: 0.7887
+  Recall: 0.6738
+  F1-Score: 0.7268
+  Training time: 124.68s
+  Prediction time: 0.3690s
+
+Training SVM...
+  ✓ Model loaded on GPU: NVIDIA GeForce RTX 5070 Ti
+  Accuracy: 0.7875
+  Precision: 0.7880
+  Recall: 0.7057
+  F1-Score: 0.7446
+  Training time: 203.18s
+  Prediction time: 0.3620s
+
+Training Naive Bayes...
+  ✓ Model loaded on GPU: NVIDIA GeForce RTX 5070 Ti
+  Accuracy: 0.7587
+  Precision: 0.7560
+  Recall: 0.6708
+  F1-Score: 0.7108
+  Training time: 107.97s
+  Prediction time: 0.3430s
+
+Training Random Forest...
+  ✓ Model loaded on GPU: NVIDIA GeForce RTX 5070 Ti
+  Accuracy: 0.7806
+  Precision: 0.7763
+  Recall: 0.7035
+  F1-Score: 0.7381
+  Training time: 238.35s
+  Prediction time: 0.3920s
+
+Training AdaBoost...
+  ✓ Model loaded on GPU: NVIDIA GeForce RTX 5070 Ti
+  Accuracy: 0.7826
+  Precision: 0.7772
+  Recall: 0.7087
+  F1-Score: 0.7414
+  Training time: 161.89s
+  Prediction time: 0.3780s
+
+=== MODEL COMPARISON SUMMARY ===
+        Model  Accuracy  Precision   Recall  F1-Score  Train Time (s)  Pred Time (s)
+Decision Tree  0.773698   0.788735 0.673833  0.726771      124.675328       0.368999
+          SVM  0.787544   0.788009 0.705722  0.744599      203.178434       0.362000
+  Naive Bayes  0.758665   0.755991 0.670751  0.710825      107.967070       0.343026
+Random Forest  0.780591   0.776267 0.703491  0.738089      238.345093       0.392001
+     AdaBoost  0.782618   0.777214 0.708728  0.741393      161.892732       0.378001
+
+Best model: SVM
+
+✓ Task 6 Complete: Classical ML modeling finished
+  Deep learning sequences saved to .npy files
+
+============================================================
+TASK 7: Advanced Evaluation
+============================================================
+
+Number of unique participants: 12
+Participants: ['Cycling-2023-09-14_06-22-31' 'Cycling-2023-09-14_06-33-47'
+ 'Cycling-2023-09-14_06-47-00' 'Cycling-2023-09-16_07-43-07'
+ 'Cycling-2023-09-16_09-25-09' 'Cycling-2023-10-18_06-36-17'
+ 'Cycling-2023-10-18_06-51-26' 'Sitting-2023-09-14_08-37-45'
+ 'Sitting-2023-09-14_09-11-15' 'Sitting-2023-10-18_09-05-37'
+ 'Walking-2023-09-14_21-51-59' 'Walking-2023-09-16_18-14-40']
+Using device: CUDA (NVIDIA GPU: NVIDIA GeForce RTX 5070 Ti, CUDA 12.8, Compute 12.0, 1 device(s))
+Running LOSO evaluation (may take a while)...
+
+Fold 1 (Participant Cycling-2023-09-14_06-22-31): Accuracy = 0.7935
+Fold 2 (Participant Cycling-2023-09-14_06-33-47): Accuracy = 0.8073
+Fold 3 (Participant Cycling-2023-09-14_06-47-00): Accuracy = 0.8967
+Fold 4 (Participant Cycling-2023-09-16_07-43-07): Accuracy = 0.8173
+Fold 5 (Participant Cycling-2023-09-16_09-25-09): Accuracy = 0.8429
+Fold 6 (Participant Cycling-2023-10-18_06-36-17): Accuracy = 0.8999
+Fold 7 (Participant Cycling-2023-10-18_06-51-26): Accuracy = 0.9328
+Fold 8 (Participant Sitting-2023-09-14_08-37-45): Accuracy = 0.5865
+Fold 9 (Participant Sitting-2023-09-14_09-11-15): Accuracy = 0.5681
+Fold 10 (Participant Sitting-2023-10-18_09-05-37): Accuracy = 0.2857
+Fold 11 (Participant Walking-2023-09-14_21-51-59): Accuracy = 0.3738
+Fold 12 (Participant Walking-2023-09-16_18-14-40): Accuracy = 0.2026
+
+=== LOSO OVERALL RESULTS ===
+Mean Accuracy: 0.6673 (+/- 0.2467)
+Overall Accuracy: 0.6545
+Overall Precision (macro): 0.6057
+Overall Recall (macro): 0.5320
+Overall F1-Score (macro): 0.5665
+
+=== EVALUATION METHOD COMPARISON ===
+     Evaluation Method  Accuracy  Precision (macro)  Recall (macro)  F1-Score (macro)
+Standard Split (80/20)  0.787544           0.788009        0.705722          0.744599
+ LOSO Cross-Validation  0.654542           0.605743        0.531975          0.566468
+Testing window size: 25 samples (0.50 seconds)
+Using multiprocessing with 31 workers for feature extraction...
+  Processed 108/108 sensor columns...
+  Completed processing all 108 sensor columns
