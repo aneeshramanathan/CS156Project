@@ -19,9 +19,7 @@ from data_loading import download_dataset, load_activity_data, create_dataset_su
 from preprocessing import preprocess_signal, preprocess_dataset
 from windowing import create_windows, analyze_window_sizes
 from feature_extraction import extract_features_from_dataset
-from modeling import train_classical_models, create_sequences_for_dl, FeatureDataset, evaluate_pytorch_model
-from torch.utils.data import DataLoader
-from utils import get_device
+from modeling import train_classical_models
 from evaluation import (
     evaluate_standard_split, evaluate_loso, compare_window_sizes,
     generate_confusion_matrix, generate_classification_report
@@ -208,30 +206,14 @@ def main():
     
     plot_model_comparison(results_df, output_path=output_dir / 'task6_model_comparison.png')
     
-    # Choose best PyTorch model for downstream PyTorch-based evaluation (Task 7)
-    pytorch_model_names = [name for name in trained_models.keys() if name != "XGBoost"]
-    best_pytorch_rows = results_df[results_df['Model'].isin(pytorch_model_names)]
-    best_model_name = best_pytorch_rows.loc[best_pytorch_rows['Accuracy'].idxmax(), 'Model']
+    # Choose best model for downstream evaluation (Task 7)
+    model_names = [name for name in trained_models.keys()]
+    best_rows = results_df[results_df['Model'].isin(model_names)]
+    best_model_name = best_rows.loc[best_rows['Accuracy'].idxmax(), 'Model']
     best_model = trained_models[best_model_name]
-    print(f"\nBest PyTorch model: {best_model_name}")
-    
-    X_seq, y_seq = create_sequences_for_dl(preprocessed_data, 
-                                           window_size=DEFAULT_WINDOW_SIZE, 
-                                           overlap=DEFAULT_OVERLAP)
-    le_dl = LabelEncoder()
-    y_seq_encoded = le_dl.fit_transform(y_seq)
-    
-    X_seq_train, X_seq_test, y_seq_train, y_seq_test = train_test_split(
-        X_seq, y_seq_encoded, test_size=0.2, random_state=42, stratify=y_seq_encoded
-    )
-    
-    np.save('X_seq_train.npy', X_seq_train)
-    np.save('X_seq_test.npy', X_seq_test)
-    np.save('y_seq_train.npy', y_seq_train)
-    np.save('y_seq_test.npy', y_seq_test)
+    print(f"\nBest model: {best_model_name}")
     
     print("\n✓ Task 6 Complete: Classical ML modeling finished")
-    print("  Deep learning sequences saved to .npy files")
     
     # ============================================================================
     # Task 7: Advanced Evaluation
@@ -274,11 +256,8 @@ def main():
     plot_window_size_comparison(window_results_df, 
                                 output_path=output_dir / 'task7_window_size_comparison.png')
     
-    # Evaluate best PyTorch model
-    device, _ = get_device()
-    test_dataset = FeatureDataset(X_test, y_test)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-    y_pred_best, _ = evaluate_pytorch_model(best_model, test_loader, device)
+    # Evaluate best model
+    y_pred_best = best_model.predict(X_test)
     cm, cm_normalized, class_names = generate_confusion_matrix(y_test, y_pred_best, le.classes_)
     
     plot_confusion_matrix(cm, cm_normalized, class_names, 

@@ -2,13 +2,12 @@
 
 import numpy as np
 import pandas as pd
-import torch
 from collections import Counter
-from torch.utils.data import DataLoader
+from sklearn.ensemble import RandomForestClassifier
 from feature_extraction import extract_features_from_dataset
-from modeling import train_classical_models, RandomForestNN, FeatureDataset, train_pytorch_model, evaluate_pytorch_model
+from modeling import train_classical_models
 from utils import (
-    DEFAULT_SAMPLING_FREQUENCY, detect_platform, get_device,
+    DEFAULT_SAMPLING_FREQUENCY, detect_platform,
     StandardScaler, LabelEncoder, train_test_split,
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
@@ -16,14 +15,10 @@ from utils import (
 
 
 def evaluate_standard_split(model, X_train, y_train, X_test, y_test):
-    """Evaluate PyTorch model with standard 80/20 split."""
-    device, _ = get_device()
-    
-    # PyTorch model evaluation
-    model.eval()
-    test_dataset = FeatureDataset(X_test, y_test)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-    y_pred, y_true = evaluate_pytorch_model(model, test_loader, device)
+    """Evaluate scikit-learn model with standard 80/20 split."""
+    # Scikit-learn model evaluation
+    y_pred = model.predict(X_test)
+    y_true = y_test
     
     accuracy = accuracy_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
@@ -41,24 +36,30 @@ def evaluate_standard_split(model, X_train, y_train, X_test, y_test):
 
 def evaluate_loso(X, y, groups, model_class=None, model_params=None):
     """
-    Evaluate using Leave-One-Subject-Out cross-validation with PyTorch models.
+    Evaluate using Leave-One-Subject-Out cross-validation with scikit-learn models.
     
     Args:
         X: Feature matrix
         y: Labels
         groups: Group labels (participant IDs)
-        model_class: Model class to use (defaults to RandomForestNN)
-        model_params: Dictionary of model parameters (not used for PyTorch, kept for compatibility)
+        model_class: Model class to use (defaults to RandomForestClassifier)
+        model_params: Dictionary of model parameters
     
     Returns:
         Dictionary with LOSO metrics
     """
-    device, device_name = get_device()
+    platform_info = detect_platform()
     if model_class is None:
-        model_class = RandomForestNN
-    
-    input_size = X.shape[1]
-    num_classes = len(np.unique(y))
+        model_class = RandomForestClassifier
+    if model_params is None:
+        model_params = {
+            'n_estimators': 100,
+            'max_depth': 20,
+            'min_samples_split': 5,
+            'min_samples_leaf': 2,
+            'n_jobs': platform_info["optimal_n_jobs"],
+            'random_state': 42
+        }
     
     unique_participants = np.unique(groups)
     n_participants = len(unique_participants)
@@ -73,16 +74,11 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         
-        # Use a simple PyTorch model for evaluation
-        train_dataset = FeatureDataset(X_scaled, y)
-        train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=0)
-        model_cv = model_class(input_size, num_classes).to(device)
-        train_pytorch_model(model_cv, train_loader, device, epochs=20, early_stopping=False)
-        
-        test_dataset = FeatureDataset(X_scaled, y)
-        test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=0)
-        y_pred, y_true = evaluate_pytorch_model(model_cv, test_loader, device)
-        loso_accuracy = accuracy_score(y_true, y_pred)
+        # Use a simple scikit-learn model for evaluation
+        model_cv = model_class(**model_params)
+        model_cv.fit(X_scaled, y)
+        y_pred = model_cv.predict(X_scaled)
+        loso_accuracy = accuracy_score(y, y_pred)
         
         return {
             'accuracy': loso_accuracy,
@@ -96,7 +92,7 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
         }
     
     print(f"Participants: {unique_participants}")
-    print(f"Using device: {device_name}")
+    print(f"Using scikit-learn {model_class.__name__}")
     
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
@@ -122,44 +118,17 @@ def evaluate_loso(X, y, groups, model_class=None, model_params=None):
         y_train_fold = y[train_idx]
         y_test_fold = y[test_idx]
         
-        # Train PyTorch model
-        train_dataset = FeatureDataset(X_train_fold, y_train_fold)
+        # Train scikit-learn model
+        model_fold = model_class(**model_params)
+        model_fold.fit(X_train_fold, y_train_fold)
         
         # Evaluate
-        # Compute class weights for imbalanced classes
-        class_counts = Counter(y_train_fold)
-        total_samples = len(y_train_fold)
-        class_weights = [total_samples / (num_classes * class_counts.get(i, 1)) 
-                         for i in range(num_classes)]
+        y_pred_fold = model_fold.predict(X_test_fold)
         
-        # Create validation split (10% of training data) for early stopping
-        val_size = max(1, int(0.1 * len(train_dataset)))
-        train_size = len(train_dataset) - val_size
-        if train_size > 0 and val_size > 0:
-            train_subset, val_subset = torch.utils.data.random_split(
-                train_dataset, [train_size, val_size], 
-                generator=torch.Generator().manual_seed(42)
-            )
-            train_loader = DataLoader(train_subset, batch_size=128, shuffle=True, num_workers=0)
-            val_loader = DataLoader(val_subset, batch_size=128, shuffle=False, num_workers=0)
-        else:
-            train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=0)
-            val_loader = None
-        
-        model_fold = model_class(input_size, num_classes).to(device)
-        train_pytorch_model(model_fold, train_loader, device, epochs=20, 
-                           class_weights=class_weights, early_stopping=(val_loader is not None),
-                           val_loader=val_loader)
-        
-        # Evaluate
-        test_dataset = FeatureDataset(X_test_fold, y_test_fold)
-        test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=0)
-        y_pred_fold, y_true_fold = evaluate_pytorch_model(model_fold, test_loader, device)
-        
-        acc = accuracy_score(y_true_fold, y_pred_fold)
+        acc = accuracy_score(y_test_fold, y_pred_fold)
         loso_scores.append(acc)
         loso_predictions.extend(y_pred_fold)
-        loso_true_labels.extend(y_true_fold)
+        loso_true_labels.extend(y_test_fold)
         
         test_participant = groups[test_idx][0]
         print(f"Fold {fold}/{n_participants} (Participant {test_participant}): Accuracy = {acc:.4f}")
@@ -209,7 +178,7 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
     """
     from feature_extraction import extract_features_from_dataset
     
-    device, device_name = get_device()
+    platform_info = detect_platform()
     
     window_results = []
     
@@ -227,46 +196,23 @@ def compare_window_sizes(preprocessed_data, window_sizes, feature_cols_func,
             X_ws_scaled, y_ws, test_size=0.2, random_state=42, stratify=y_ws
         )
         
-        # Use PyTorch model
-        input_size = X_train_ws.shape[1]
-        num_classes = len(np.unique(y_ws))
+        # Use scikit-learn RandomForest model
+        rf_ws = RandomForestClassifier(
+            n_estimators=100,
+            max_depth=20,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            n_jobs=platform_info["optimal_n_jobs"],
+            random_state=42
+        )
+        rf_ws.fit(X_train_ws, y_train_ws)
         
-        # Compute class weights for imbalanced classes
-        class_counts = Counter(y_train_ws)
-        total_samples = len(y_train_ws)
-        class_weights = [total_samples / (num_classes * class_counts.get(i, 1)) 
-                         for i in range(num_classes)]
+        y_pred_ws = rf_ws.predict(X_test_ws)
         
-        train_dataset = FeatureDataset(X_train_ws, y_train_ws)
-        # Create validation split for early stopping
-        val_size = max(1, int(0.1 * len(train_dataset)))
-        train_size = len(train_dataset) - val_size
-        if train_size > 0 and val_size > 0:
-            train_subset, val_subset = torch.utils.data.random_split(
-                train_dataset, [train_size, val_size],
-                generator=torch.Generator().manual_seed(42)
-            )
-            train_loader = DataLoader(train_subset, batch_size=128, shuffle=True, num_workers=0)
-            val_loader = DataLoader(val_subset, batch_size=128, shuffle=False, num_workers=0)
-        else:
-            train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=0)
-            val_loader = None
-        
-        rf_ws = RandomForestNN(input_size, num_classes).to(device)
-        # Slightly fewer epochs here since we train for 10 different window sizes
-        # and also use early stopping.
-        train_pytorch_model(rf_ws, train_loader, device, epochs=12,
-                           class_weights=class_weights, early_stopping=(val_loader is not None),
-                           val_loader=val_loader)
-        
-        test_dataset = FeatureDataset(X_test_ws, y_test_ws)
-        test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=0)
-        y_pred_ws, y_true_ws = evaluate_pytorch_model(rf_ws, test_loader, device)
-        
-        acc = accuracy_score(y_true_ws, y_pred_ws)
-        prec = precision_score(y_true_ws, y_pred_ws, average='macro', zero_division=0)
-        rec = recall_score(y_true_ws, y_pred_ws, average='macro', zero_division=0)
-        f1 = f1_score(y_true_ws, y_pred_ws, average='macro', zero_division=0)
+        acc = accuracy_score(y_test_ws, y_pred_ws)
+        prec = precision_score(y_test_ws, y_pred_ws, average='macro', zero_division=0)
+        rec = recall_score(y_test_ws, y_pred_ws, average='macro', zero_division=0)
+        f1 = f1_score(y_test_ws, y_pred_ws, average='macro', zero_division=0)
         
         window_results.append({
             'Window Size': ws,
