@@ -43,12 +43,7 @@ wheels/
 !kaggle.json
 
 # Output files
-*.png
-*.jpg
-*.jpeg
-*.pdf
-*.html
-dashboard.html
+/visualizations/
 
 # Backup files
 *_backup.*
