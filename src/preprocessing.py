@@ -87,3 +87,92 @@ def preprocess_dataset(signal_data):
     
     return preprocessed_data
 
+
+def normalize_sequence_for_dl(sequence, method='standardize'):
+    sequence = np.asarray(sequence)
+    original_shape = sequence.shape
+    sequence_flat = sequence.flatten() if sequence.ndim > 1 else sequence
+    
+    if method == 'standardize':
+        mean = np.mean(sequence_flat)
+        std = np.std(sequence_flat)
+        if std < 1e-8:
+            std = 1.0
+        normalized = (sequence - mean) / std
+        params = {'mean': mean, 'std': std, 'method': 'standardize'}
+    elif method == 'minmax':
+        min_val = np.min(sequence_flat)
+        max_val = np.max(sequence_flat)
+        if max_val - min_val < 1e-8:
+            normalized = sequence - min_val
+        else:
+            normalized = (sequence - min_val) / (max_val - min_val)
+        params = {'min': min_val, 'max': max_val, 'method': 'minmax'}
+    else:
+        raise ValueError(f"Unknown normalization method: {method}")
+    
+    return normalized, params
+
+
+def normalize_sequences_for_dl(sequences, method='standardize', fit_on_train=True, 
+                               normalization_params=None):
+    if isinstance(sequences, list):
+        all_sequences = np.concatenate([np.asarray(seq).flatten() for seq in sequences])
+    else:
+        all_sequences = np.asarray(sequences).flatten()
+    
+    if fit_on_train:
+        if method == 'standardize':
+            mean = np.mean(all_sequences)
+            std = np.std(all_sequences)
+            if std < 1e-8:
+                std = 1.0
+            normalization_params = {'mean': mean, 'std': std, 'method': 'standardize'}
+        elif method == 'minmax':
+            min_val = np.min(all_sequences)
+            max_val = np.max(all_sequences)
+            normalization_params = {'min': min_val, 'max': max_val, 'method': 'minmax'}
+    
+    normalized_sequences = []
+    for seq in (sequences if isinstance(sequences, list) else [sequences]):
+        seq = np.asarray(seq)
+        if normalization_params['method'] == 'standardize':
+            normalized = (seq - normalization_params['mean']) / normalization_params['std']
+        else:  # minmax
+            min_val = normalization_params['min']
+            max_val = normalization_params['max']
+            if max_val - min_val < 1e-8:
+                normalized = seq - min_val
+            else:
+                normalized = (seq - min_val) / (max_val - min_val)
+        normalized_sequences.append(normalized)
+    
+    if not isinstance(sequences, list):
+        normalized_sequences = normalized_sequences[0]
+    
+    return normalized_sequences, normalization_params
+
+
+def prepare_dl_input(sequences, normalize=True, method='standardize'):
+    sequences = np.asarray(sequences)
+    params = None
+    
+    if normalize:
+        # Normalize each feature channel independently
+        if sequences.ndim == 3:  # (n_samples, seq_len, n_features)
+            n_features = sequences.shape[2]
+            normalized_seqs = np.zeros_like(sequences)
+            feature_params = []
+            
+            for feat_idx in range(n_features):
+                feat_data = sequences[:, :, feat_idx]
+                norm_feat, feat_param = normalize_sequence_for_dl(feat_data, method=method)
+                normalized_seqs[:, :, feat_idx] = norm_feat
+                feature_params.append(feat_param)
+            
+            params = {'feature_params': feature_params, 'method': method}
+            sequences = normalized_seqs
+        else:
+            sequences, params = normalize_sequences_for_dl(sequences, method=method)
+    
+    return sequences, params

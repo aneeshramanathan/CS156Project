@@ -45,6 +45,7 @@ from src.visualization import (
     plot_windowing_strategies,
 )
 from src.windowing import analyze_window_sizes
+from src.sequence_preparation import prepare_sequences_for_ann
 
 warnings.filterwarnings('ignore')
 
@@ -351,6 +352,27 @@ def run_task7_evaluation(features_df, feature_cols, best_model, le, X_train, y_t
     print("\n[OK] Task 7 Complete: Advanced evaluation finished")
 
 
+def run_task_dl_preparation(preprocessed_data, output_dir):
+    """Deep Learning Preparation: Sequences for ANN models"""
+    print("\n" + "="*60)
+    print("DEEP LEARNING PREPARATION: Sequences for ANN Models")
+    print("="*60)
+    
+    # Prepare sequences for ANN models
+    sequence_info = prepare_sequences_for_ann(
+        preprocessed_data,
+        window_size=DEFAULT_WINDOW_SIZE,
+        overlap=DEFAULT_OVERLAP,
+        test_size=0.2,
+        random_state=42,
+        output_dir=Path("data/processed"),
+        normalize=True
+    )
+    
+    print("\n[OK] Deep Learning preparation complete: Sequences formatted for ANN models")
+    return sequence_info
+
+
 def main():
     """Run all tasks sequentially."""
     output_dir = ensure_visualizations_dir()
@@ -374,6 +396,7 @@ def main():
             features_df, feature_cols, output_dir)
         run_task7_evaluation(features_df, feature_cols, best_model, le, X_train, y_train,
                             X_test, y_test, preprocessed_data, output_dir)
+        run_task_dl_preparation(preprocessed_data, output_dir)
         
         print("\n" + "="*60)
         print("ALL TASKS COMPLETE!")
