@@ -196,8 +196,8 @@ def run_task5_feature_extraction(preprocessed_data, output_dir):
     feature_cols = [col for col in features_df.columns 
                    if col not in ['label', 'participant', 'sensor_channel']]
     
-    sample_features = features_df[feature_cols[:9]].head(100)
-    plot_feature_distributions(sample_features, 
+    # Use full dataframe to find all feature types across all sensors
+    plot_feature_distributions(features_df, 
                               output_path=output_dir / 'task5_feature_distributions.png')
     
     importance_df = plot_feature_importance(features_df, feature_cols, 

@@ -198,13 +198,14 @@ def plot_windowing_strategies(window_analysis_df, sample_signal, output_path):
 
 def plot_feature_distributions(features_df, output_path):
     """Task 5: Plot feature distributions."""
-    fig, axes = plt.subplots(3, 3, figsize=(18, 15))
-    axes = axes.flatten()
-    
-    feature_cols = ['mean', 'std', 'rms', 'zcr', 'dominant_freq', 
+    feature_types = ['mean', 'std', 'rms', 'zcr', 'dominant_freq', 
                    'spectral_energy', 'spectral_entropy', 'skewness', 'kurtosis']
     
-    for idx, col in enumerate(feature_cols):
+    # Find which feature types actually exist and collect their data
+    found_features = []
+    found_data = []
+    
+    for col in feature_types:
         matching_cols = [
             c for c in features_df.columns
             if c == col or c.endswith(f"_{col}") or c.endswith(f"-{col}")
@@ -215,13 +216,37 @@ def plot_feature_distributions(features_df, output_path):
             stacked_values = stacked_values[~np.isnan(stacked_values)]
             
             if stacked_values.size > 0:
-                axes[idx].hist(stacked_values, bins=30, alpha=0.7, edgecolor='black')
-                axes[idx].set_title(f'{col.replace("_", " ").title()}', fontweight='bold')
-                axes[idx].set_xlabel('Value')
-                axes[idx].set_ylabel('Frequency')
-                axes[idx].grid(True, alpha=0.3)
-        else:
-            axes[idx].axis('off')
+                found_features.append(col)
+                found_data.append(stacked_values)
+    
+    # Check if we have any features to plot
+    if len(found_features) == 0:
+        print("Warning: No feature distributions found to plot")
+        return
+    
+    # Calculate grid dimensions (3 columns, dynamic rows)
+    n_cols = 3
+    n_rows = (len(found_features) + n_cols - 1) // n_cols  # Ceiling division
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6*n_cols, 5*n_rows))
+    
+    # Handle single subplot case
+    if len(found_features) == 1:
+        axes = [axes]
+    else:
+        axes = axes.flatten()
+    
+    # Plot found features
+    for idx, (col, data) in enumerate(zip(found_features, found_data)):
+        axes[idx].hist(data, bins=30, alpha=0.7, edgecolor='black')
+        axes[idx].set_title(f'{col.replace("_", " ").title()}', fontweight='bold')
+        axes[idx].set_xlabel('Value')
+        axes[idx].set_ylabel('Frequency')
+        axes[idx].grid(True, alpha=0.3)
+    
+    # Hide unused subplots
+    for idx in range(len(found_features), len(axes)):
+        axes[idx].axis('off')
     
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
